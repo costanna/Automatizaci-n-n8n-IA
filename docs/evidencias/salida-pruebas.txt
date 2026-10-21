@@ -1,0 +1,35 @@
+﻿Reiniciando la tienda (datos de ejemplo limpios)...
+  la tienda esta lista
+
+== Flujo 1 À Confirmacion de apartado ==
+  OK   se crea el apartado por API (respuesta 201)
+  OK   el cliente recibe el mensaje de confirmacion
+  OK   el mensaje lleva precio, abonado y pendiente
+
+== Flujo 2 À Recibo de abono ==
+  OK   se registra el abono (respuesta 201)
+  OK   el cliente recibe el recibo del abono
+  OK   el recibo lleva el importe del abono
+  OK   el recibo dice lo que queda pendiente
+
+== Flujo 3 À Abonos a distancia ==
+  OK   01_bizum_carmen.eml: se ha registrado el abono (nombre unico -> se registra)
+  OK   02_bizum_jorge.eml: se ha registrado el abono (el concepto trae el numero de apartado -> se registra)
+  OK   03_transferencia_lucia.eml: se ha registrado el abono (paga justo lo que falta -> se registra y liquida)
+  OK   03_transferencia_lucia.eml: el apartado queda liquidado
+  OK   04_bizum_laura.eml: no se registra nada (paga de mas -> no se registra, se avisa a Marisa)
+  OK   04_bizum_laura.eml: se avisa a Marisa
+  OK   05_bizum_romero.eml: no se registra nada (apellido e inicial sin concepto -> no se registra, se pregunta a Marisa)
+  OK   05_bizum_romero.eml: se avisa a Marisa
+  OK   06_bizum_paula.eml: no se registra nada (fuera de plazo -> no se registra, se avisa a Marisa)
+  OK   06_bizum_paula.eml: se avisa a Marisa
+  OK   07_transferencia_desconocido.eml: no se registra nada (cliente desconocido -> no se registra, se pregunta a Marisa)
+  OK   07_transferencia_desconocido.eml: se avisa a Marisa
+  OK   08_publicidad_banco.eml: se ignora en silencio (no se avisa a nadie)
+  OK   09_bizum_silvia.eml: se ha registrado el abono (nombre unico -> se registra)
+
+== Flujo 4 À Aviso de venta grande ==
+  OK   una venta por debajo del umbral no avisa
+  OK   una venta por encima del umbral avisa a Marisa
+
+Correos enviados durante las pruebas: 22 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatizaci¾n\data\envios)

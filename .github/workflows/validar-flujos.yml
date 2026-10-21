@@ -1,0 +1,47 @@
+name: Validar los flujos de n8n
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  validar:
+    name: Los JSON de workflows/ son válidos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validar los flujos
+        run: python scripts/validar_flujos.py
+
+      - name: Comprobar que las specs y los flujos van juntos
+        run: |
+          python - <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          raiz = pathlib.Path(".")
+          flujos = {p.stem.split("-")[0] for p in (raiz / "workflows").glob("*.json")}
+          specs = {p.stem.split("-")[0] for p in (raiz / "specs").glob("*.md") if p.stem[:2].isdigit()}
+          faltan = sorted(flujos - specs - {"sub"})
+          if faltan:
+              print("Falta la spec de:", ", ".join(faltan))
+              sys.exit(1)
+          print("Cada flujo tiene su spec.")
+          PY
+
+      - name: Comprobar que no hay secretos
+        run: |
+          if grep -rInE "(sk-[A-Za-z0-9]{16,}|Bearer [A-Za-z0-9._-]{16,}|eyJ[A-Za-z0-9_-]{10,}\.)" \
+            --include="*.json" --include="*.js" --include="*.py" --include="*.md" . ; then
+            echo "::error::Se ha encontrado algo que parece una clave en el repositorio."
+            exit 1
+          fi
+          echo "Sin claves en el repositorio."

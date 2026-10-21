@@ -1,0 +1,299 @@
+{
+  "name": "06 · Recordatorios y vencimientos",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "ec6005d7-9628-4611-bf43-d3317e766ab7",
+      "name": "Cada mañana a las 08:30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://tienda:8000/api/apartados?estado=activo",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "418e11f0-25c9-4427-906b-718c74ac0c38",
+      "name": "Apartados activos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -340,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WsD8qReuVdb5h8sd",
+          "name": "Tienda - API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Clasifica los apartados activos en tres grupos (HU-06 y HU-07):\n//   - los que hay que recordar (su plazo vence dentro de los dias de aviso)\n//   - los que ya estan fuera de plazo y hay que vencer\n//   - los demas\n//\n// Los dias de aviso vienen de la variable DIAS_AVISO_VENCIMIENTO (7 y 1 por defecto).\n// Ningun importe se recalcula: pendiente y fecha_limite son los de la API.\nconst apartados = $input.all().flatMap((i) => (Array.isArray(i.json) ? i.json : [i.json])).filter((a) => a && a.id !== undefined);\n\nconst hoy = new Intl.DateTimeFormat('en-CA', {\n  timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',\n}).format(new Date());\n\nconst diasAviso = String($vars.DIAS_AVISO_VENCIMIENTO || '7,1')\n  .split(',').map((n) => Number(String(n).trim())).filter((n) => Number.isFinite(n));\n\nconst diasQueFaltan = (fechaLimite) => Math.round(\n  (new Date(String(fechaLimite) + 'T00:00:00Z').getTime() - new Date(hoy + 'T00:00:00Z').getTime()) / 86400000,\n);\n\nconst recordatorios = [];\nconst vencimientos = [];\nfor (const a of apartados) {\n  if (!a.fecha_limite) continue;\n  const dias = diasQueFaltan(a.fecha_limite);\n  if (diasAviso.includes(dias)) recordatorios.push({ apartado: a, dias, clave: a.id + ':' + dias });\n  else if (dias < 0) vencimientos.push({ apartado: a, dias, clave: a.id + ':vencido' });\n}\n\nreturn [{ json: { hoy, apartados: apartados.length, recordatorios, vencimientos } }];\n"
+      },
+      "id": "0c27bf49-091c-470d-95d1-7f8627c3ee3f",
+      "name": "Clasificar apartados",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Un recordatorio por cliente cuyo plazo vence dentro de los dias de aviso.\n//\n// El mensaje lleva lo que falta por pagar y la fecha limite: los datos de la API.\n// Si ese recordatorio ya se envio otro dia, se salta (regla A6).\nconst clasificacion = $('Clasificar apartados').first().json ?? {};\n\n// Los avisos que ya se han enviados se guardan en los datos estaticos del flujo\n// (memoria de n8n entre ejecuciones), para no avisar dos veces al mismo cliente.\nconst staticData = $getWorkflowStaticData('global');\nstaticData.avisos = Array.isArray(staticData.avisos) ? staticData.avisos : [];\nconst enviados = new Set(staticData.avisos.map((k) => String(k)));\n\nconst euros = (n) => Number(n ?? 0).toFixed(2).replace('.', ',') + ' EUR';\nconst escapar = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nconst salida = [];\nconst nuevos = [];\nfor (const r of (clasificacion.recordatorios ?? [])) {\n  if (enviados.has(r.clave)) continue;\n  const a = r.apartado;\n  const cuando = r.dias === 1 ? 'mañana' : 'dentro de ' + r.dias + ' días';\n  const cuerpo = [\n    'Hola ' + (a.cliente ?? '') + ',',\n    '',\n    'Tu apartado de ' + [a.producto, a.talla].filter(Boolean).join(' · ') + ' vence ' + cuando + ' (' + (a.fecha_limite ?? '') + ').',\n    '',\n    'Te queda por pagar: ' + euros(a.pendiente),\n    'Abonado: ' + euros(a.abonado),\n    'Fecha limite: ' + (a.fecha_limite ?? ''),\n    '',\n    'Si no lo terminas antes de la fecha, los zapatos vuelven a la tienda y lo abonado',\n    'se convierte en un vale de compra. Puedes venir cuando quieras a pagar el resto.',\n    '',\n    'Gracias!',\n    'Zapateria Paso Firme',\n  ].join('\\n');\n\n  nuevos.push(r.clave);\n  salida.push({\n    json: {\n      canal: 'email',\n      email: String(a.email ?? '').trim(),\n      asunto: 'Tu apartado vence ' + cuando,\n      cuerpo,\n      cuerpo_html: '<p>' + escapar(cuerpo).replace(/\\n/g, '<br>') + '</p>',\n      clave: r.clave,\n      apartado_id: a.id,\n    },\n  });\n}\n\nreturn salida;\n"
+      },
+      "id": "fe403304-f373-40d3-b782-bf0c2af377cd",
+      "name": "Preparar recordatorios",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        340,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "qiU7wQ7zQlr3HNNp",
+          "mode": "list",
+          "cachedResultName": "SUB · Notificar"
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "id": "6bd47cdf-9256-4e6c-8f17-3c20f0e5e3dc",
+      "name": "Enviar recordatorios",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        580,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Actualiza el historico de recordatorios enviados.\n// Se escribe DESPUES de enviar, y con la clave 'apartado:dias' para que el\n// mismo cliente no reciba dos veces el aviso del mismo plazo.\n// Las claves son las del nodo que preparo los recordatorios (el de envio devuelve\n// el resultado de la notificacion, sin la clave).\nconst nuevos = $('Preparar recordatorios').all().map((i) => i.json?.clave).filter(Boolean);\n\n// Se guardan en los datos estaticos del flujo: la memoria de n8n entre ejecuciones.\nconst staticData = $getWorkflowStaticData('global');\nstaticData.avisos = Array.isArray(staticData.avisos) ? staticData.avisos : [];\nconst todos = Array.from(new Set([...staticData.avisos.map(String), ...nuevos.map(String)]));\nstaticData.avisos = todos;\n\nreturn [{ json: { avisos: todos, nuevos: nuevos.length } }];\n"
+      },
+      "id": "f7d9bbf4-4213-4878-bb17-762aa4c88ff6",
+      "name": "Guardar los avisos enviados",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        820,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Apartados que ya estan fuera de plazo: hay que vencerlos por API.\n// La app genera el vale; n8n solo avisa.\nconst clasificacion = $('Clasificar apartados').first().json ?? {};\nreturn (clasificacion.vencimientos ?? []).map((v) => ({\n  json: {\n    apartado_id: v.apartado.id,\n    cliente: v.apartado.cliente,\n    producto: v.apartado.producto,\n    talla: v.apartado.talla,\n    precio: v.apartado.precio,\n    abonado: v.apartado.abonado,\n    pendiente: v.apartado.pendiente,\n    fecha_limite: v.apartado.fecha_limite,\n    dias: v.dias,\n  },\n}));\n"
+      },
+      "id": "35e140e9-82b6-468d-b3e6-e87d68517d59",
+      "name": "Preparar vencimientos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        340,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://tienda:8000/api/apartados/{{ $json.apartado_id }}/vencer",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "51e53fd6-713d-4e7b-bc7c-aed7305beee1",
+      "name": "Vencer apartado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        580,
+        340
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WsD8qReuVdb5h8sd",
+          "name": "Tienda - API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// La API devuelve el apartado vencido y su vale.\n// Si no se ha podido vencer (por ejemplo, alguien lo ha pagado antes), no se avisa\n// de un vale que no existe.\nconst r = $input.first().json ?? {};\nconst apartado = r.apartado ?? null;\nconst vale = r.vale ?? null;\n\nif (!apartado || !vale) {\n  return [{ json: { vencido: false, detalle: String(r.detail ?? r.message ?? 'No se ha podido vencer el apartado') } }];\n}\n\nreturn [{\n  json: {\n    vencido: true,\n    apartado,\n    vale,\n    detalle: 'Apartado #' + apartado.id + ' vencido con el vale ' + vale.codigo,\n  },\n}];\n"
+      },
+      "id": "6116ec4d-e4d3-4c6f-ae64-25d68f6bb446",
+      "name": "Comprobar el vencimiento",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        820,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "ByBfvDU4n4TDZeUe",
+          "mode": "list",
+          "cachedResultName": "SUB · Avisar vale"
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "id": "76865574-5da0-4783-b072-d9b7ea90bbc0",
+      "name": "Avisar el vale",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        1060,
+        340
+      ]
+    }
+  ],
+  "connections": {
+    "Cada mañana a las 08:30": {
+      "main": [
+        [
+          {
+            "node": "Apartados activos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apartados activos": {
+      "main": [
+        [
+          {
+            "node": "Clasificar apartados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clasificar apartados": {
+      "main": [
+        [
+          {
+            "node": "Preparar recordatorios",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Preparar vencimientos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar recordatorios": {
+      "main": [
+        [
+          {
+            "node": "Enviar recordatorios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar recordatorios": {
+      "main": [
+        [
+          {
+            "node": "Guardar los avisos enviados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar los avisos enviados": {
+      "main": [
+        []
+      ]
+    },
+    "Preparar vencimientos": {
+      "main": [
+        [
+          {
+            "node": "Vencer apartado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vencer apartado": {
+      "main": [
+        [
+          {
+            "node": "Comprobar el vencimiento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comprobar el vencimiento": {
+      "main": [
+        [
+          {
+            "node": "Avisar el vale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}

@@ -1,0 +1,96 @@
+{
+  "descripcion": "Datos de prueba del flujo 03 (Abonos a distancia) con el resultado esperado de cada correo del enunciado.",
+  "preparacion": "La app debe estar con los datos de ejemplo (SEED=1). Los importes esperados dependen de los apartados de ejemplo, que se generan con una semilla fija (random.Random(42)) y con las fechas relativas a hoy.",
+  "casos": [
+    {
+      "fichero": "01_bizum_carmen.eml",
+      "ordenante": "CARMEN RUIZ GARCIA",
+      "importe": 10.0,
+      "concepto": "zuecos",
+      "apartado_esperado": "Carmen Ruiz",
+      "resultado_esperado": "registra",
+      "motivo": "el nombre coincide con un unico apartado activo",
+      "notas": "La app avisa del abono por webhook y el despachador manda el recibo (HU-02)."
+    },
+    {
+      "fichero": "02_bizum_jorge.eml",
+      "ordenante": "JORGE M.",
+      "importe": 20.0,
+      "concepto": "apartado 2 bota",
+      "apartado_esperado": "Jorge Martín",
+      "resultado_esperado": "registra",
+      "motivo": "el concepto trae el numero de apartado, asi que no hace falta adivinar",
+      "notas": "El nombre va abreviado, pero el concepto resuelve el apartado."
+    },
+    {
+      "fichero": "03_transferencia_lucia.eml",
+      "ordenante": "LUCIA GOMEZ PEREZ",
+      "importe": 12.0,
+      "concepto": "Liquidar mocasines",
+      "apartado_esperado": "Lucía Gómez",
+      "resultado_esperado": "registra_y_liquida",
+      "motivo": "paga justo lo que falta: el pendiente queda en 0 y el apartado pasa a liquidado",
+      "notas": "Es una transferencia, pero la app solo admite efectivo, tarjeta y bizum: se registra como bizum."
+    },
+    {
+      "fichero": "04_bizum_laura.eml",
+      "ordenante": "LAURA O.",
+      "importe": 15.0,
+      "concepto": "deportivas",
+      "apartado_esperado": "Laura Ortega",
+      "resultado_esperado": "no_registra_avisa",
+      "motivo": "importe_excede",
+      "notas": "El pendiente del apartado es menor que el importe del aviso."
+    },
+    {
+      "fichero": "05_bizum_romero.eml",
+      "ordenante": "ROMERO D",
+      "importe": 10.0,
+      "concepto": "",
+      "apartado_esperado": "David Romero",
+      "resultado_esperado": "no_registra_avisa",
+      "motivo": "sin_concepto",
+      "notas": "Solo coincide por apellido e inicial y el aviso no trae concepto: se pregunta a Marisa."
+    },
+    {
+      "fichero": "06_bizum_paula.eml",
+      "ordenante": "PAULA RAMOS LEON",
+      "importe": 20.0,
+      "concepto": "zapatillas running perdón por el retraso",
+      "apartado_esperado": "Paula Ramos",
+      "resultado_esperado": "no_registra_avisa",
+      "motivo": "fuera_de_plazo",
+      "notas": "El apartado sigue activo pero su fecha limite ya ha pasado: la app lo vence el flujo 06."
+    },
+    {
+      "fichero": "07_transferencia_desconocido.eml",
+      "ordenante": "ANTONIO FERNANDEZ SOTO",
+      "importe": 25.0,
+      "concepto": "botas",
+      "apartado_esperado": null,
+      "resultado_esperado": "no_registra_avisa",
+      "motivo": "cliente_desconocido",
+      "notas": "No coincide con ningun cliente de la tienda."
+    },
+    {
+      "fichero": "08_publicidad_banco.eml",
+      "ordenante": null,
+      "importe": null,
+      "concepto": null,
+      "apartado_esperado": null,
+      "resultado_esperado": "ignora_en_silencio",
+      "motivo": "no_es_un_pago",
+      "notas": "No se avisa a nadie: la publicidad del banco se ignora."
+    },
+    {
+      "fichero": "09_bizum_silvia.eml",
+      "ordenante": "SILVIA CORTES",
+      "importe": 5.0,
+      "concepto": "abono sandalias",
+      "apartado_esperado": "Silvia Cortés",
+      "resultado_esperado": "registra",
+      "motivo": "el nombre coincide con un unico apartado activo",
+      "notas": ""
+    }
+  ]
+}

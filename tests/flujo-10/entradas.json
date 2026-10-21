@@ -1,0 +1,39 @@
+{
+  "flujo": "10 · Migración del Excel",
+  "disparador": "Manual Trigger",
+  "entrada": {
+    "fichero_apartados": "data/excel_actual_apartados.csv",
+    "fichero_ventas": "data/excel_actual_ventas.csv"
+  },
+  "resultado_esperado": {
+    "apartados_a_crear": 7,
+    "abonos_a_crear": 4,
+    "dudosos": [
+      {
+        "cliente": "Lucía Gómez",
+        "producto": "Sandalia tacón negra",
+        "importe": "4",
+        "motivo": "abono inicial por debajo de 5 EUR"
+      },
+      {
+        "cliente": "Lucía Gómez",
+        "producto": "Sandalia tacón negra",
+        "importe": "41",
+        "motivo": "el apartado no se ha cargado (abono inicial bajo el minimo)"
+      }
+    ],
+    "fechas_originales": {
+      "Carmen Ruiz": "2026-09-02",
+      "Jorge Martín": "2026-09-02",
+      "Ana Torres": "2026-09-07",
+      "Rosa Díaz": "2026-09-15"
+    },
+    "limpieza": {
+      "fechas": ["02/09/2026", "7/9/26"],
+      "nombres": ["carmen ruiz"],
+      "telefonos": ["612345002"],
+      "importes": ["89.90", "15€", "1.842,30"]
+    },
+    "ejecutar_dos_veces_no_duplica": true
+  }
+}

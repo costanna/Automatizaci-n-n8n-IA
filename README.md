@@ -13,9 +13,10 @@ cierres de caja, informes y la lectura automática de los avisos del banco.
 
 - [Arquitectura](#-arquitectura)
 - [Puesta en marcha](#-puesta-en-marcha)
+- [Los flujos](#-los-flujos)
+- [Importarlos y probarlos](#-importarlos-y-probarlos)
 - [Cómo se trabaja en este repo (Git Flow)](#-cómo-se-trabaja-en-este-repo-git-flow)
 - [Estructura del proyecto](#-estructura-del-proyecto)
-- [Flujos de n8n](#-flujos-de-n8n)
 - [Credenciales y variables](#-credenciales-y-variables)
 - [Documentación](#-documentación)
 
@@ -29,7 +30,7 @@ cierres de caja, informes y la lectura automática de los avisos del banco.
   │  (FastAPI)   │                          │  (flujos y subflujos)│
   └──────┬───────┘                          └─────────┬──────────┘
          │                                              │
-         │  GET/POST /api/...  (X-API-Key)            │  Gmail / Telegram
+         │  GET/POST /api/...  (X-API-Key)            │  Gmail / SMTP / Telegram
          └──────────────────────────────────────────────┘
 ```
 
@@ -40,7 +41,11 @@ cierres de caja, informes y la lectura automática de los avisos del banco.
   `X-API-Key`. **Las reglas del negocio las aplica la app**: n8n no recalcula `pendiente` ni
   `abonado`, los lee.
 
-Detalle completo en [`docs/guia-de-la-app.md`](docs/guia-de-la-app.md).
+> **La regla de oro**: *las cifras las calcula la app; n8n las lee y las copia. El modelo de IA
+> redacta el texto, nunca calcula dinero.*
+
+Detalle completo en [`docs/guia-de-la-app.md`](docs/guia-de-la-app.md) y en la
+[ontología del dominio](specs/00-ontologia.md).
 
 ---
 
@@ -65,6 +70,56 @@ relativas a hoy) para poder probar: hay apartados que vencen en 7 días, en 1 d�
 de plazo. Para empezar de cero: `SEED=0` en el `.env`.
 
 Para parar: `docker compose down`. Para borrar también los datos: `docker compose down -v`.
+
+---
+
+## ⚙️ Los flujos
+
+| # | Flujo | Disparador | Qué hace | Historia |
+|---|---|---|---|---|
+| 00 | `00 · Despachador de eventos` | Webhook `POST /tienda` | Reparte los 4 eventos de la app con un nodo **Switch** | — |
+| 01 | `01 · Confirmación de apartado` | Evento `apartado.creado` | Manda al cliente qué ha apartado, cuánto falta y hasta cuándo | HU-01 |
+| 02 | `02 · Recibo de abono` | Evento `abono.registrado` | Manda el recibo y avisa si el apartado queda liquidado | HU-02 |
+| 03 | `03 · Abonos a distancia` | Correo del banco (IMAP) | Extrae el pago con IA, busca el apartado por API y registra el abono | HU-03 |
+| 04 | `04 · Aviso de venta grande` | Evento `venta.registrada` | Avisa a Marisa de las ventas por encima del umbral | HU-09 |
+| 05 | `05 · Cierre diario` | Programado (23:00) | Cierra la caja: ventas, abonos y total por forma de pago | HU-04 |
+| 06 | `06 · Recordatorios y vencimientos` | Programado (08:30) | Recuerda los vencimientos, vence los fuera de plazo y avisa del vale | HU-06, HU-07 |
+| 07 | `07 · Informe mensual` | Programado (día 1, 09:00) | Recaudación del mes, pendiente de cobro y apartados del mes | HU-08 |
+| 08 | `08 · Avisos de error` | Error Trigger | Avisa del flujo, el paso y el error (sin claves) | HU-05 |
+| 10 | `10 · Migración del Excel` | Manual | Migra el Excel antiguo, limpia los datos e informa de los dudosos | HU-10 |
+| 90 | `90 · Datos de demo` | Manual | Crea datos de ejemplo por API para la demo | — |
+
+Y tres **subflujos** reutilizables:
+
+| Subflujo | Para qué |
+|---|---|
+| `SUB · Notificar` | Envía el mensaje por el canal que le pidan (correo o Telegram) y dice si ha salido |
+| `SUB · Buscar apartado` | Busca a qué apartado pertenece un pago remoto |
+| `SUB · Avisar vale` | Avisa al cliente del vale y a la tienda de los zapatos que vuelven a la venta |
+
+Las specs de cada uno (qué hace, casos de error y criterios de aceptación) están en
+[`specs/`](specs/).
+
+---
+
+## 🔧 Importarlos y probarlos
+
+```bash
+# Importa los 14 flujos en n8n y los enlaza (ids de subflujos y de credenciales)
+python scripts/enlazar_flujos.py
+
+# Comprueba que los JSON son válidos y que no hay credenciales dentro
+python scripts/validar_flujos.py
+
+# Para ver los correos que se envían, sin configurar un SMTP de verdad
+python scripts/smtp_desarrollo.py
+
+# La batería de pruebas, contra la tienda de verdad
+python scripts/probar_flujos.py
+```
+
+Las instrucciones paso a paso (credenciales, publicar los flujos, errores frecuentes) están en
+[`docs/como-importar-flujos.md`](docs/como-importar-flujos.md).
 
 ---
 
@@ -117,12 +172,21 @@ git push -u origin feature/flujo-03-abonos-distancia
 ├── data/                    # Datos de partida: Excel de Marisa y avisos del banco
 │   ├── excel_actual_apartados.csv
 │   ├── excel_actual_ventas.csv
-│   └── correos/             # Los 9 correos de prueba del flujo 3
+│   ├── correos/             # Los 9 correos de prueba del flujo 3
+│   └── envios/              # Correos que ha enviado el SMTP de desarrollo
 ├── docs/                    # Documentación del proyecto
+│   ├── guia-de-la-app.md        # Cómo funciona la app, la API y el webhook
+│   ├── mapa-proceso.md          # El proceso de apartado, antes y después
+│   ├── kanban.md                # Tablero con las historias de usuario
+│   ├── credenciales.md          # Credenciales y variables que necesita cada flujo
+│   ├── como-importar-flujos.md  # Cómo importarlos, configurarlos y probarlos
+│   ├── ai-log.md                # Bitácora de IA: prompts, errores y correcciones
+│   └── retrospectiva.md         # Retrospectiva del equipo
 ├── workflows/               # Flujos de n8n exportados en JSON (versionados)
 ├── specs/                   # Specs (SDD) de cada automatización + ontología del dominio
-├── scripts/                 # Utilidades (datos de demo, validación de flujos)
+├── scripts/                 # Utilidades (importar y enlazar, validar, SMTP, pruebas)
 ├── tests/                   # Datos de prueba y resultados esperados de cada flujo
+├── .github/workflows/        # CI que valida los JSON de los flujos en cada PR
 ├── AGENTS.md                # Contexto que se le da al agente de IA
 ├── docker-compose.yml
 └── .env.example
@@ -130,18 +194,17 @@ git push -u origin feature/flujo-03-abonos-distancia
 
 ---
 
-## ⚙️ Flujos de n8n
-
-Los flujos están exportados en `workflows/` y se importan desde n8n
-(*Workflows → Import from File*). Las instrucciones paso a paso están en
-[`docs/como-importar-flujos.md`](docs/como-importar-flujos.md).
-
----
-
 ## 🔑 Credenciales y variables
 
-En n8n, las claves se guardan en **Credentials** (nunca en el JSON del flujo). La lista completa
-está en [`docs/credenciales.md`](docs/credenciales.md).
+En n8n, las claves se guardan en **Credentials** (nunca en el JSON del flujo) y los valores de
+configuración, en **Variables**. La lista completa está en
+[`docs/credenciales.md`](docs/credenciales.md).
+
+| Variable | Por defecto | Para qué |
+|---|---|---|
+| `EMAIL_MARISA` | `marisa@pasofirme.example` | A quién se avisa a la tienda |
+| `UMBRAL_VENTA_GRANDE` | `200` | Aviso de venta grande (HU-09) |
+| `DIAS_AVISO_VENCIMIENTO` | `7,1` | Cuántos días antes se avisa del vencimiento (HU-06) |
 
 ---
 
@@ -150,9 +213,10 @@ está en [`docs/credenciales.md`](docs/credenciales.md).
 | Documento | Para qué |
 |---|---|
 | [`docs/guia-de-la-app.md`](docs/guia-de-la-app.md) | Cómo funciona la app, la API y el webhook |
-| [`docs/mapa-proceso.md`](docs/mapa-proceso.md) | Mapa del proceso de apartado: hoy vs. automatizado |
+| [`docs/mapa-proceso.md`](docs/mapa-proceso.md) | El proceso de apartado: hoy y automatizado (con diagrama) |
+| [`docs/kanban.md`](docs/kanban.md) | Tablero con las historias de usuario y quién hace cada una |
 | [`docs/credenciales.md`](docs/credenciales.md) | Credenciales y variables que necesita cada flujo |
-| [`docs/kanban.md`](docs/kanban.md) | Tablero con las historias de usuario |
+| [`docs/como-importar-flujos.md`](docs/como-importar-flujos.md) | Cómo importarlos, configurarlos y probarlos |
 | [`docs/ai-log.md`](docs/ai-log.md) | Bitácora de IA: prompts, errores y correcciones |
 | [`docs/retrospectiva.md`](docs/retrospectiva.md) | Retrospectiva del equipo |
 | [`AGENTS.md`](AGENTS.md) | Contexto y reglas para el agente de IA |
