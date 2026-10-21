@@ -1,44 +1,78 @@
 ﻿<!doctype html>
-<html lang="es">
+<html lang="es" data-tema="claro">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="refresh" content="60">
 <title>Panel de la tienda · Paso Firme</title>
+<script>
+// El tema se aplica antes de pintar la pagina: si no, se ve un destello del otro tema.
+// Prioridad: lo que eligio el usuario, si no, el del sistema.
+(function () {
+  try {
+    const guardado = localStorage.getItem('tema-paso-firme');
+    const oscuroDelSistema = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-tema', guardado || (oscuroDelSistema ? 'oscuro' : 'claro'));
+  } catch (e) {
+    document.documentElement.setAttribute('data-tema', 'claro');
+  }
+})();
+</script>
 <style>
-  :root {
-    --fondo: #f5f3ef; --tarjeta: #fff; --texto: #241f1b; --suave: #6f675f;
-    --borde: #e4ded5; --verde: #2f6f4f; --ambar: #b26a00; --rojo: #a3341f;
+  :root, :root[data-tema="claro"] {
+    --fondo: #f5f3ef; --tarjeta: #ffffff; --texto: #241f1b; --suave: #6f675f;
+    --borde: #e4ded5; --acento: #2f6f4f; --ambar: #b26a00; --rojo: #a3341f;
+    --chip-fondo: #eef1ee; --chip-texto: #2f6f4f;
+    --chip-rojo-fondo: #fdeee9; --chip-rojo-texto: #a3341f;
+    --sombra: 0 6px 24px rgba(0, 0, 0, .08);
+    --boton: #ffffff; --boton-texto: #241f1b;
+  }
+  :root[data-tema="oscuro"] {
+    --fondo: #141210; --tarjeta: #1e1b18; --texto: #ece7e0; --suave: #a49a90;
+    --borde: #322d28; --acento: #63c795; --ambar: #e0a33c; --rojo: #e8775f;
+    --chip-fondo: #2a2622; --chip-texto: #63c795;
+    --chip-rojo-fondo: #3a2320; --chip-rojo-texto: #e8775f;
+    --sombra: 0 6px 24px rgba(0, 0, 0, .45);
+    --boton: #262320; --boton-texto: #ece7e0;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--fondo); color: var(--texto);
-         font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+         font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+         -webkit-font-smoothing: antialiased; }
   main { max-width: 900px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
-  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem 1rem; margin-bottom: 1.25rem; }
-  h1 { font-size: 1.35rem; margin: 0; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; margin-bottom: 1.25rem; }
+  h1 { font-size: 1.35rem; margin: 0; flex: 1 1 auto; }
   .fecha { color: var(--suave); font-size: .9rem; }
+  .boton { background: var(--boton); color: var(--boton-texto); border: 1px solid var(--borde);
+           border-radius: 999px; width: 2.4rem; height: 2.4rem; font-size: 1rem; cursor: pointer;
+           line-height: 1; }
+  .boton:hover { border-color: var(--acento); }
   .cifras { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-bottom: 1.25rem; }
   .cifra { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 14px; padding: 1rem 1.1rem; }
   .cifra .etiqueta { color: var(--suave); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
   .cifra .valor { font-size: 1.5rem; font-weight: 700; margin-top: .25rem; }
   .cifra .nota { color: var(--suave); font-size: .8rem; margin-top: .2rem; }
-  .destacada { border-color: var(--verde); }
+  .destacada { border-color: var(--acento); }
   .panel { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 14px; padding: 1rem 1.1rem 1.2rem; }
   .panel h2 { font-size: 1rem; margin: 0 0 .75rem; }
   table { width: 100%; border-collapse: collapse; font-size: .92rem; }
   th, td { text-align: left; padding: .55rem .4rem; border-bottom: 1px solid var(--borde); }
   th { color: var(--suave); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  .chip { display: inline-block; padding: .1rem .5rem; border-radius: 999px; background: #eef1ee;
-          color: var(--verde); font-size: .78rem; font-weight: 600; }
-  .chip-urgent { background: #fdeee9; color: var(--rojo); }
+  .chip { display: inline-block; padding: .1rem .5rem; border-radius: 999px; background: var(--chip-fondo);
+          color: var(--chip-texto); font-size: .78rem; font-weight: 600; }
+  .chip-urgent { background: var(--chip-rojo-fondo); color: var(--chip-rojo-texto); }
   .vacio { color: var(--suave); text-align: center; padding: 1.2rem 0; }
   footer { margin-top: 1.5rem; color: var(--suave); font-size: .8rem; text-align: center; }
-  a { color: var(--verde); }
+  a { color: var(--acento); }
   @media (max-width: 560px) {
     main { padding: 1rem .75rem 2.5rem; }
     .cifra .valor { font-size: 1.3rem; }
     th:nth-child(2), td:nth-child(2) { display: none; }
+    .fecha { width: 100%; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .boton, .cifra, .panel { transition: background-color .2s ease, border-color .2s ease, color .2s ease; }
   }
 </style>
 </head>
@@ -47,28 +81,29 @@
   <header>
     <h1>Zapatería Paso Firme</h1>
     <span class="fecha">2026-10-21 · se actualiza cada minuto</span>
+    <button id="tema" class="boton" type="button" title="Cambiar entre tema claro y oscuro" aria-label="Cambiar el tema">☀</button>
   </header>
 
   <section class="cifras">
     <div class="cifra destacada">
       <div class="etiqueta">Cobrado hoy</div>
-      <div class="valor">213,65 EUR</div>
-      <div class="nota">4 ventas · 1 abonos</div>
+      <div class="valor">545,55 EUR</div>
+      <div class="nota">6 ventas · 7 abonos</div>
     </div>
     <div class="cifra">
       <div class="etiqueta">Recaudado este mes</div>
-      <div class="valor">2652,10 EUR</div>
-      <div class="nota">69 ventas · 38 abonos del mes</div>
+      <div class="valor">2705,65 EUR</div>
+      <div class="nota">64 ventas · 44 abonos del mes</div>
     </div>
     <div class="cifra">
       <div class="etiqueta">Pendiente de cobro</div>
-      <div class="valor">587,15 EUR</div>
+      <div class="valor">605,05 EUR</div>
       <div class="nota">16 apartados activos</div>
     </div>
     <div class="cifra">
       <div class="etiqueta">Apartados</div>
-      <div class="valor">16 / 24</div>
-      <div class="nota">7 liquidados · 1 vencidos</div>
+      <div class="valor">16 / 25</div>
+      <div class="nota">8 liquidados · 1 vencidos</div>
     </div>
   </section>
 
@@ -116,5 +151,25 @@
     <a href="/webhook/panel?formato=json">ver los datos en JSON</a>
   </footer>
 </main>
+<script>
+// Interruptor de tema: guarda la eleccion en el navegador.
+(function () {
+  const boton = document.getElementById('tema');
+  if (!boton) return;
+  const pintar = () => {
+    const oscuro = document.documentElement.getAttribute('data-tema') === 'oscuro';
+    boton.textContent = oscuro ? '☀' : '☾';
+    boton.setAttribute('aria-label', oscuro ? 'Cambiar al tema claro' : 'Cambiar al tema oscuro');
+  };
+  boton.addEventListener('click', () => {
+    const oscuro = document.documentElement.getAttribute('data-tema') === 'oscuro';
+    const nuevo = oscuro ? 'claro' : 'oscuro';
+    document.documentElement.setAttribute('data-tema', nuevo);
+    try { localStorage.setItem('tema-paso-firme', nuevo); } catch (e) { /* sin almacenamiento */ }
+    pintar();
+  });
+  pintar();
+})();
+</script>
 </body>
 </html>

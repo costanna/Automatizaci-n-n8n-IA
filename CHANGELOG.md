@@ -4,7 +4,16 @@ Todas las novedades del proyecto. El formato sigue
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el versionado es
 [SemVer](https://semver.org/lang/es/).
 
+## [1.3.1] - 2026-10-21
+
+### Añadido
+
+- El panel de Marisa tiene **tema claro y oscuro**: arranca con el tema del sistema y hay un
+  interruptor en la cabecera para cambiarlo a mano (se guarda en el navegador). Los dos temas
+  salen de variables CSS, así que no hay colores sueltos por el HTML.
+
 ## [1.3.0] - 2026-10-21
+
 
 ### Añadido
 
