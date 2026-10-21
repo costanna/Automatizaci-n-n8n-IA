@@ -1,0 +1,106 @@
+{
+  "name": "08 · Avisos de error",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "f7d9bbf4-4213-4878-bb17-762aa4c88ff6",
+      "name": "Error de un flujo",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        300
+      ],
+      "notes": "Este flujo se activa cuando falla OTRO flujo (Settings > Error Workflow)."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Prepara el aviso de error (HU-05): que flujo, que paso y que error.\n//\n// IMPORTANTE: el aviso no puede llevar credenciales. Antes de enviar nada se limpia\n// cualquier cosa que parezca una clave (regla A7).\nconst e = $input.first().json ?? {};\n\n// n8n mete el error dentro de 'execution' (execution.error) y el flujo que ha\n// fallado en 'workflow' (workflow.name).\nconst err = e.execution?.error ?? e.error ?? {};\nconst flujo = e.workflow?.name ?? '(flujo desconocido)';\nconst nodo = err.node?.name ?? e.execution?.lastNodeExecuted ?? e.lastNodeExecuted ?? '(paso desconocido)';\nconst mensaje = err.message ?? e.message ?? 'Error desconocido';\nconst cuando = err.timestamp ?? e.execution?.startedAt ?? new Date().toISOString();\n\n// Limpia secretos que se hayan colado en el mensaje de error.\nconst limpiar = (texto) => String(texto ?? '')\n  .replace(/(x-api-key\\s*[:=]\\s*)\\S+/gi, '$1***')\n  .replace(/((?:api[_-]?key|apikey|password|passwd|secret|token|bearer)\\s*[:=]\\s*)\\S+/gi, '$1***')\n  .replace(/\\bsk-[A-Za-z0-9_-]{8,}/g, 'sk-***')\n  .replace(/\\bey[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}/g, '***');\n\nconst cuerpo = [\n  'Una automatizacion ha fallado:',\n  '',\n  'Flujo: ' + flujo,\n  'Paso: ' + nodo,\n  'Error: ' + limpiar(mensaje),\n  'Cuando: ' + cuando,\n  '',\n  'Revisalo en n8n > Executions.',\n].join('\\n');\n\nreturn [{\n  json: {\n    flujo,\n    nodo,\n    mensaje: limpiar(mensaje),\n    cuerpo,\n  },\n}];\n"
+      },
+      "id": "dc0998a7-04fb-4989-99b3-54a57554df02",
+      "name": "Preparar aviso",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -60,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// El aviso va a la tienda. Si no se puede enviar, se deja constancia en el\n// propio item para que la ejecucion de n8n lo muestre.\nconst aviso = $input.first().json ?? {};\nconst emailTienda = $vars.EMAIL_MARISA || 'marisa@pasofirme.example';\nconst escapar = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nreturn [{\n  json: {\n    canal: 'email',\n    email: emailTienda,\n    asunto: 'Error en una automatizacion · ' + (aviso.flujo ?? ''),\n    cuerpo: aviso.cuerpo ?? '',\n    cuerpo_html: '<p>' + escapar(aviso.cuerpo ?? '').replace(/\\n/g, '<br>') + '</p>',\n  },\n}];\n"
+      },
+      "id": "35e140e9-82b6-468d-b3e6-e87d68517d59",
+      "name": "Preparar aviso a la tienda",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "qiU7wQ7zQlr3HNNp",
+          "mode": "list",
+          "cachedResultName": "SUB · Notificar"
+        },
+        "mode": "once",
+        "options": {}
+      },
+      "id": "51e53fd6-713d-4e7b-bc7c-aed7305beee1",
+      "name": "Notificar",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        460,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Error de un flujo": {
+      "main": [
+        [
+          {
+            "node": "Preparar aviso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar aviso": {
+      "main": [
+        [
+          {
+            "node": "Preparar aviso a la tienda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar aviso a la tienda": {
+      "main": [
+        [
+          {
+            "node": "Notificar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}
