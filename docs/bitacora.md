@@ -34,18 +34,36 @@ Correo -> Normalizar -> ¿es un pago? -> Extraer (modelo) -> Interpretar -> Busc
 respuesta no es un JSON utilizable, entra un extractor por expresiones regulares con el mismo
 contrato de salida (`ordenante`, `importe`, `concepto`) y el flujo sigue. La salida del extractor
 lleva `origen: "modelo"` o `origen: "regex"`, así que se puede ver en la ejecución cuál de los dos
-ha acted.
+ha actuado.
 
-### Comparativa de los dos modelos gratuitos probados
+### Comparativa de los dos modelos gratuitos
 
 Misma tarea (extraer los tres datos de los 9 correos de `data/correos/`), mismo *prompt*:
 
 | Modelo | Aciertos (9) | Velocidad media | Errores |
 |---|---|---|---|
-| `llama-3.3-70b-versatile` (Groq, free) | 9/9 | ~1,2 s | Ninguno con el *prompt* de `specs/03` |
-| `gemma-3-27b-it` (OpenRouter, free) | 7/9 | ~3,4 s | En `05_bizum_romero` se inventa un concepto; en `02_bizum_jorge` omite el número de apartado |
+| `llama-3.3-70b-versatile` (Groq, free) | _pendiente_ | _pendiente_ | _pendiente_ |
+| `gemma-3-27b-it` (OpenRouter, free) | _pendiente_ | _pendiente_ | _pendiente_ |
 
-Se queda Groq por defecto, pero el extractor de respaldo hace que la elección no sea crítica.
+> **Esta comparativa no se ha ejecutado.** En el entorno donde se ha construido el proyecto no
+> hay ninguna clave de proveedor, así que **el modelo no se ha llamado ni una vez**: los nueve
+> correos de las pruebas los ha resuelto el extractor por expresiones regulares (en la
+> ejecución se ve `origen: "regex"`). La tabla está preparada para rellenarla en cuanto se
+> configure la credencial.
+
+Cómo hacerla (diez minutos):
+
+1. Crear las credenciales `Modelo - Groq` y `Modelo - OpenRouter` en n8n.
+2. En el nodo *Modelo de lenguaje* del flujo 03, cambiar `model` y `baseURL` por los del
+   modelo que se quiere medir.
+3. `python scripts/probar_flujos.py --flujo 3` y mirar, en cada ejecución, si el `origen` del
+   item es `modelo` o `regex`: los correos resueltos por el modelo son los que cuentan como
+   acierto.
+4. Anotar aciertos y tiempo medio, y apuntar en qué correos falla cada uno.
+
+Lo que **sí** está comprobado: **sin modelo, los nueve correos se resuelven igual** (con el
+extractor de respaldo) y el flujo no falla en ninguno. Por eso la elección de modelo no es
+crítica: Groq por defecto, y el respaldo cubre el caso de que no haya credencial.
 
 ### El *prompt* del flujo
 

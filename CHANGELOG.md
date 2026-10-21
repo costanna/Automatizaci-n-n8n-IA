@@ -76,8 +76,8 @@ Todas las novedades del proyecto. El formato sigue
 - `data/config.csv`: la configuración de los flujos (a quién se avisa, el umbral de la venta
   grande, los días de aviso) sale de aquí. Los flujos lo leen en cada ejecución, así que se
   cambia **sin tocar ningún flujo** ni republicar nada (criterio de HU-09).
-- `docs/bitacora.md`: la bitácora técnica del proyecto, con las decisiones, la comparativa de
-  modelos y los doce fallos encontrados al construir y probar los flujos.
+- `docs/bitacora.md`: la bitácora técnica del proyecto, con las decisiones, el protocolo de
+  comparativa de modelos y los veinte fallos encontrados al construir y probar los flujos.
 
 ### Corregido
 
