@@ -5,7 +5,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "tienda",
-        "responseMode": "onReceived",
+        "responseMode": "responseNode",
         "options": {}
       },
       "id": "ec6005d7-9628-4611-bf43-d3317e766ab7",
@@ -17,7 +17,7 @@
         300
       ],
       "webhookId": "78703c34-3638-4e48-9d1c-06ad5fde403a",
-      "notes": "Unico webhook del proyecto: la app avisa aqui y este flujo reparte con un Switch."
+      "notes": "Unico webhook del proyecto: la app avisa aqui y este flujo reparte con un Switch. Va protegido con un token (data/config.csv)."
     },
     {
       "parameters": {
@@ -267,6 +267,126 @@
         240,
         620
       ]
+    },
+    {
+      "parameters": {
+        "filePath": "/datos/config.csv",
+        "dataPropertyName": "data"
+      },
+      "id": "d1000001-0000-4000-8000-000000000001",
+      "name": "Leer configuracion",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "notes": "La configuracion vive en data/config.csv: se cambia sin tocar el flujo."
+    },
+    {
+      "parameters": {
+        "operation": "fromFile",
+        "binaryPropertyName": "data",
+        "fileFormat": "csv",
+        "options": {
+          "delimiter": ",",
+          "headerRow": true,
+          "rawData": true,
+          "includeEmptyCells": true
+        }
+      },
+      "id": "d1000002-0000-4000-8000-000000000002",
+      "name": "Parsear configuracion",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 2,
+      "position": [
+        -380,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// El webhook de la tienda va protegido: sin el token correcto, la peticion se\n// rechaza con un 401 y no se ejecuta nada.\n//\n// El token puede venir en la query (?token=...) o en la cabecera X-Webhook-Token.\n// Se compara con el valor de data/config.csv (WEBHOOK_TOKEN).\nconst config = {};\nfor (const item of $('Parsear configuracion').all()) {\n  const clave = String(item.json?.clave ?? '').trim();\n  const valor = String(item.json?.valor ?? '').trim();\n  if (clave) config[clave] = valor;\n}\n\nconst peticion = $('Webhook eventos').first().json ?? {};\nconst esperado = String(config.WEBHOOK_TOKEN ?? '').trim();\nconst recibido = String(\n  peticion.query?.token ?? peticion.headers?.['x-webhook-token'] ?? peticion.headers?.['X-Webhook-Token'] ?? ''\n).trim();\n\nconst autorizado = esperado.length > 0 && recibido.length > 0 && recibido === esperado;\n\nreturn [{\n  json: {\n    ...peticion,\n    autorizado,\n    motivo: autorizado ? '' : (esperado.length === 0\n      ? 'No hay WEBHOOK_TOKEN configurado en data/config.csv'\n      : 'El token del webhook no es valido'),\n  },\n}];\n"
+      },
+      "id": "d1000003-0000-4000-8000-000000000003",
+      "name": "Comprobar el token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d1000004-0000-4000-8000-000000000004",
+              "leftValue": "={{ $json.autorizado }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d1000005-0000-4000-8000-000000000005",
+      "name": "¿Token valido?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        20,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "d1000006-0000-4000-8000-000000000006",
+      "name": "Responder OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        220,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { error: $json.motivo ?? 'Token no valido' } }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "d1000007-0000-4000-8000-000000000007",
+      "name": "Responder sin autorizacion",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        220,
+        420
+      ]
     }
   ],
   "connections": {
@@ -274,7 +394,7 @@
       "main": [
         [
           {
-            "node": "Normalizar evento",
+            "node": "Leer configuracion",
             "type": "main",
             "index": 0
           }
@@ -336,6 +456,68 @@
         [
           {
             "node": "Avisar evento desconocido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer configuracion": {
+      "main": [
+        [
+          {
+            "node": "Parsear configuracion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear configuracion": {
+      "main": [
+        [
+          {
+            "node": "Comprobar el token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comprobar el token": {
+      "main": [
+        [
+          {
+            "node": "¿Token valido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Token valido?": {
+      "main": [
+        [
+          {
+            "node": "Responder OK",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder sin autorizacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Responder OK": {
+      "main": [
+        [
+          {
+            "node": "Normalizar evento",
             "type": "main",
             "index": 0
           }
