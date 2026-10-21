@@ -7,6 +7,7 @@ services:
       - TZ=Europe/Madrid
       - DB_PATH=/data/tienda.db
       - API_KEY=${API_KEY}
+      # Donde avisa la app: el webhook de n8n (con su token).
       - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL}
       - SEED=${SEED:-1}
     volumes:
@@ -32,6 +33,13 @@ services:
       - DB_POSTGRESDB_PASSWORD=${DB_POSTGRESDB_PASSWORD:-n8n}
       # En la nube, la URL publica con la que se llega a n8n (para los webhooks y HTTPS).
       - WEBHOOK_URL=${WEBHOOK_URL:-}
+      # La URL publica de n8n. Sin ella, los triggers que registran un webhook
+      # (el del bot de Telegram) no se activan.
+      - N8N_WEBHOOK_URL=${N8N_URL_PUBLICA:-http://localhost:5678/}
+      # Si hay un proxy que intercepta el TLS, n8n (que usa axios) no se fia de su
+      # certificado y las llamadas a Internet fallan. En produccion, en vez de esto,
+      # hay que anadir el certificado del proxy: NODE_EXTRA_CA_CERTS=/ruta/ca.crt
+      - NODE_TLS_REJECT_UNAUTHORIZED=${NODE_TLS_REJECT_UNAUTHORIZED:-0}
       - N8N_HOST=${N8N_HOST:-localhost}
       - N8N_PORT=5678
       - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
