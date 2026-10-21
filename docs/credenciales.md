@@ -12,7 +12,8 @@
 | `Tienda - API` | **Header Auth** | Name: `X-API-Key` · Value: el `API_KEY` de tu `.env` | `sub-buscar-apartado`, `03`, `05`, `06`, `07`, `10`, `90` |
 | `SMTP - Paso Firme` | **SMTP** | Host, puerto, usuario y contraseña del correo saliente | `sub-notificar` (envío de todos los mensajes) |
 | `Banco - IMAP` | **IMAP** | Host, puerto, usuario y contraseña del buzón del banco | `03 · Abonos a distancia` (leer los avisos) |
-| `Telegram - Paso Firme` | **Telegram API** | El token del bot | `14 · Asistente de Telegram` (el bot) y `sub-notificar` (canal opcional) |
+| `Telegram - Paso Firme` | **Telegram API** | El token del bot | `14 · Asistente de Telegram` (responder) y `sub-notificar` (canal opcional) |
+| `Telegram - Token del bot` | **Header Auth** | Name: `X-Telegram-Bot-Api-Secret-Token` · Value: el `TELEGRAM_SECRET_TOKEN` | `14 · Asistente de Telegram` (el webhook que recibe los updates) |
 | `Modelo - Groq` | **OpenAI compatible** | La clave del proveedor (Groq, OpenRouter, Gemini…) y la URL base | `03 · Abonos a distancia` (extraer los datos del aviso), `06` y `14` (redactar el tono) |
 | `Gmail - Paso Firme` | **Gmail OAuth2** | La cuenta de Gmail de la tienda | Alternativa al SMTP para enviar |
 
@@ -78,8 +79,10 @@ los flujos**: está en [`data/config.csv`](../data/config.csv), un fichero de do
 | `DIAS_AVISO_VENCIMIENTO` | `7,1` | Cuántos días antes se avisa del vencimiento | `06 · Recordatorios y vencimientos` |
 | `WEBHOOK_TOKEN` | *(uno largo y aleatorio)* | El token que exige el webhook de la tienda | `00 · Despachador de eventos` |
 | `TELEGRAM_ADMIN_ID` | *(vacío)* | El chat de Telegram de la tienda: solo ella pregunta por el negocio | `14 · Asistente de Telegram` |
+| `TELEGRAM_SECRET_TOKEN` | *(uno largo y aleatorio)* | El token que Telegram manda en cada update y n8n comprueba | `14 · Asistente de Telegram` |
 | `WEBHOOK_TOKEN` | *(uno largo y aleatorio)* | El token que exige el webhook de la tienda | `00 · Despachador de eventos` |
 | `TELEGRAM_ADMIN_ID` | *(vacío)* | El chat de Telegram de la tienda: solo ella pregunta por el negocio | `14 · Asistente de Telegram` |
+| `TELEGRAM_SECRET_TOKEN` | *(uno largo y aleatorio)* | El token que Telegram manda en cada update y n8n comprueba | `14 · Asistente de Telegram` |
 
 > **Por qué un fichero y no las variables de n8n.** En la edición comunitaria de n8n, *Settings →
 > Variables* no existe (es una función de pago: `Your license does not allow for
