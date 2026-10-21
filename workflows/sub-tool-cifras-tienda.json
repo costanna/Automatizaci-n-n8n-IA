@@ -1,0 +1,242 @@
+{
+  "name": "SUB · Tool cifras de la tienda",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "e2000001-0000-4000-8000-000000000001",
+      "name": "Datos de la consulta",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Rango de fechas segun el periodo pedido ('hoy', 'semana' o 'mes').\nconst consulta = $('Datos de la consulta').first().json ?? {};\n\n// El periodo puede venir dado ('semana') o deducirse de la pregunta que ha hecho\n// la tienda: asi el bot responde a \"¿cuánto se recaudó esta semana?\" con la semana.\nconst texto = String(consulta.texto ?? '').toLowerCase();\nlet periodo = String(consulta.periodo ?? '').toLowerCase();\nif (!periodo) {\n  if (texto.includes('hoy') || texto.includes('este dia') || texto.includes('hoy dia')) periodo = 'hoy';\n  else if (texto.includes('semana')) periodo = 'semana';\n  else if (texto.includes('mes') || texto.includes('este mes')) periodo = 'mes';\n  else periodo = 'mes';\n}\n\nconst iso = (d) => d.toISOString().slice(0, 10);\nconst hoy = new Date();\nconst inicio = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate()));\n\nlet desde = iso(inicio);\nlet hasta = iso(inicio);\n\nif (periodo === 'hoy') {\n  // ya esta\n} else if (periodo === 'semana') {\n  desde = iso(new Date(inicio.getTime() - 6 * 86400000));\n} else {\n  // mes natural anterior\n  const primero = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() - 1, 1));\n  const ultimo = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), 0));\n  desde = iso(primero);\n  hasta = iso(ultimo);\n}\n\nreturn [{ json: { periodo, desde, hasta } }];"
+      },
+      "id": "e2000002-0000-4000-8000-000000000002",
+      "name": "Calcular el rango",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=http://tienda:8000/api/ventas?desde={{ $json.desde }}&hasta={{ $json.hasta }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "e2000003-0000-4000-8000-000000000003",
+      "name": "Ventas del periodo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        80,
+        160
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WsD8qReuVdb5h8sd",
+          "name": "Tienda - API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Devuelve UN solo item: el nodo HTTP que va despues hace una sola peticion.\nreturn [{ json: { desde: $('Calcular el rango').first().json.desde, hasta: $('Calcular el rango').first().json.hasta } }];\n"
+      },
+      "id": "e2000004-0000-4000-8000-000000000004",
+      "name": "Preparar abonos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=http://tienda:8000/api/abonos?desde={{ $json.desde }}&hasta={{ $json.hasta }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "e2000005-0000-4000-8000-000000000005",
+      "name": "Abonos del periodo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        520,
+        160
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WsD8qReuVdb5h8sd",
+          "name": "Tienda - API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Devuelve UN solo item: el nodo HTTP que va despues hace una sola peticion.\nreturn [{ json: { ok: true } }];\n"
+      },
+      "id": "e2000006-0000-4000-8000-000000000006",
+      "name": "Preparar apartados",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        740,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://tienda:8000/api/apartados",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "e2000007-0000-4000-8000-000000000007",
+      "name": "Apartados",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        960,
+        160
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WsD8qReuVdb5h8sd",
+          "name": "Tienda - API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Cifras del negocio, tal cual las devuelve la API.\n//\n// - Recaudacion del periodo: ventas directas + abonos cobrados.\n// - Pendiente de cobro: lo que falta de todos los apartados activos.\n// - Apartados que vencen este mes natural.\n// Ninguna cifra se inventa: aqui solo se suman.\nconst rango = $('Calcular el rango').first().json ?? {};\n\nconst lista = (nodo) => $('nodo').all\n  ? []\n  : [];\n\nconst ventas = $('Ventas del periodo').all()\n  .flatMap((i) => (Array.isArray(i.json) ? i.json : [i.json]))\n  .filter((v) => v && v.id !== undefined);\nconst abonos = $('Abonos del periodo').all()\n  .flatMap((i) => (Array.isArray(i.json) ? i.json : [i.json]))\n  .filter((a) => a && a.id !== undefined);\nconst apartados = $('Apartados').all()\n  .flatMap((i) => (Array.isArray(i.json) ? i.json : [i.json]))\n  .filter((a) => a && a.id !== undefined);\n\nconst redondear = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;\nconst euros = (n) => Number(n ?? 0).toFixed(2).replace('.', ',') + ' EUR';\n\nconst totalVentas = redondear(ventas.reduce((s, v) => s + Number(v.importe ?? 0), 0));\nconst totalAbonos = redondear(abonos.reduce((s, a) => s + Number(a.importe ?? 0), 0));\nconst pendientes = apartados.filter((a) => String(a.estado) === 'activo');\nconst pendienteTotal = redondear(pendientes.reduce((s, a) => s + Number(a.pendiente ?? 0), 0));\n\nconst hoy = new Intl.DateTimeFormat('en-CA', {\n  timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',\n}).format(new Date());\nconst [anio, mes] = hoy.split('-').map(Number);\nconst mesActual = hoy.slice(0, 7);\n\nconst vencenEsteMes = apartados.filter((a) => {\n  if (String(a.estado) !== 'activo') return false;\n  const limite = String(a.fecha_limite ?? '');\n  return limite.slice(0, 7) === mesActual;\n});\n\nreturn [{\n  json: {\n    periodo: rango.periodo,\n    desde: rango.desde,\n    hasta: rango.hasta,\n    ventas_directas: totalVentas,\n    abonos: totalAbonos,\n    recaudacion: redondear(totalVentas + totalAbonos),\n    pendiente_cobro: pendienteTotal,\n    num_ventas: ventas.length,\n    num_abonos: abonos.length,\n    apartados_activos: pendientes.length,\n    vencen_este_mes: vencenEsteMes.map((a) => ({\n      id: a.id,\n      cliente: a.cliente,\n      producto: a.producto,\n      pendiente: a.pendiente,\n      fecha_limite: a.fecha_limite,\n    })),\n    cifras_texto: [\n      'Recaudado del ' + rango.desde + ' al ' + rango.hasta + ': ' + euros(totalVentas + totalAbonos),\n      'Pendiente de cobro: ' + euros(pendienteTotal),\n    ],\n  },\n}];\n"
+      },
+      "id": "e2000008-0000-4000-8000-000000000008",
+      "name": "Calcular las cifras",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1180,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Datos de la consulta": {
+      "main": [
+        [
+          {
+            "node": "Calcular el rango",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular el rango": {
+      "main": [
+        [
+          {
+            "node": "Ventas del periodo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ventas del periodo": {
+      "main": [
+        [
+          {
+            "node": "Preparar abonos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar abonos": {
+      "main": [
+        [
+          {
+            "node": "Abonos del periodo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Abonos del periodo": {
+      "main": [
+        [
+          {
+            "node": "Preparar apartados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar apartados": {
+      "main": [
+        [
+          {
+            "node": "Apartados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apartados": {
+      "main": [
+        [
+          {
+            "node": "Calcular las cifras",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}
