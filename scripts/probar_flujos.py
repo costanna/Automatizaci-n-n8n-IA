@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import pathlib
 import re
 import sys
 import time
@@ -37,7 +38,23 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 API = os.getenv("API_URL", "http://localhost:8000")
 N8N = os.getenv("N8N_URL", "http://localhost:5678")
-CLAVE = os.getenv("API_KEY", "paso-firme-dev-key")
+
+
+def _clave_api() -> str:
+    """La clave de la API: la del entorno o, si no, la del .env del proyecto."""
+    clave = os.getenv("API_KEY")
+    if clave:
+        return clave
+    env = pathlib.Path(__file__).resolve().parent.parent / ".env"
+    if env.exists():
+        for linea in env.read_text(encoding="utf-8").splitlines():
+            if linea.startswith("API_KEY="):
+                return linea.split("=", 1)[1].strip()
+    # Sin .env: la clave de desarrollo por defecto (la de .env.example).
+    return "cambia-esta-clave"
+
+
+CLAVE = _clave_api()
 CARPETA_CORREOS = RAIZ / "data" / "correos"
 CARPETA_ENVIOS = RAIZ / "data" / "envios"
 ESPERA = float(os.getenv("ESPERA", "9"))

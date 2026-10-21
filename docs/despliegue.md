@@ -33,6 +33,50 @@ Render emite el certificado TLS automáticamente: la URL del servicio ya es
 5. La app de la tienda también tiene que llegar a n8n: en el `.env` de la tienda,
    `N8N_WEBHOOK_URL=https://paso-firme-n8n.onrender.com/webhook/tienda?token=<token>`.
 
+### Los tres pasos que se olvidan
+
+1. **Las credenciales.** Los flujos no llevan las claves dentro (a propósito), así que la
+   instancia de la nube nace sin ellas. Se exportan de la local y se importan allí:
+
+   ```bash
+   # en tu maquina: exporta las credenciales (en claro) y los flujos
+   python scripts/preparar_despliegue.py
+
+   # en el shell del servicio (Render: Shell -> Start shell)
+   n8n import:credentials --separate --input=/ruta/a/deploy/credenciales
+   ```
+
+   `scripts/preparar_despliegue.py` deja las credenciales en `deploy/credenciales/` (está en el
+   `.gitignore`: **son secretos en texto plano**), los flujos en `deploy/flujos/` y las variables
+   que hay que poner en `deploy/ENTORNO.txt`. Cuando termines, borra `deploy/credenciales/`.
+
+2. **La clave de cifrado.** `N8N_ENCRYPTION_KEY` tiene que ser **la misma** en el servicio web y
+   en el cron de copias. Sin ella, las copias de seguridad no se pueden descifrar.
+
+3. **La URL pública.** `WEBHOOK_URL` y `N8N_WEBHOOK_URL` tienen que apuntar a la URL `https` del
+   servicio. Si no, los triggers que registran un webhook (el del bot) no se activan.
+
+### Comprobar que todo está en su sitio
+
+```bash
+# 1. la instancia responde por HTTPS
+curl -I https://<tu-servicio>.onrender.com/healthz
+
+# 2. los flujos estan publicados
+#    (en el editor de n8n, o con la API: GET /api/v1/workflows)
+
+# 3. la app de la tienda avisa a n8n
+#    en el .env de la tienda:
+#    N8N_WEBHOOK_URL=https://<tu-servicio>.onrender.com/webhook/tienda?token=<WEBHOOK_TOKEN>
+
+# 4. el bot recibe los updates
+scripts/conectar_bot_telegram.sh <token-del-bot> \
+    https://<tu-servicio>.onrender.com/webhook/telegram <TELEGRAM_SECRET_TOKEN>
+
+# 5. el panel se ve
+curl -I https://<tu-servicio>.onrender.com/webhook/panel
+```
+
 ### Railway, un VPS o Google Cloud
 
 La idea es la misma: n8n detrás de un proxy con TLS (Caddy, Traefik, nginx o el que
