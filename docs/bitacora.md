@@ -34,18 +34,37 @@ Correo -> Normalizar -> ¿es un pago? -> Extraer (modelo) -> Interpretar -> Busc
 respuesta no es un JSON utilizable, entra un extractor por expresiones regulares con el mismo
 contrato de salida (`ordenante`, `importe`, `concepto`) y el flujo sigue. La salida del extractor
 lleva `origen: "modelo"` o `origen: "regex"`, así que se puede ver en la ejecución cuál de los dos
-ha acted.
+ha actuado.
 
-### Comparativa de los dos modelos gratuitos probados
+### Comparativa de los dos modelos gratuitos
 
-Misma tarea (extraer los tres datos de los 9 correos de `data/correos/`), mismo *prompt*:
+La tarea es extraer `ordenante`, `importe` y `concepto` de los 8 correos de pago de
+`data/correos/` (el noveno es publicidad y el flujo lo descarta antes), con el mismo *prompt*:
 
-| Modelo | Aciertos (9) | Velocidad media | Errores |
+| Modelo | Aciertos (8) | Tiempo medio | Errores |
 |---|---|---|---|
-| `llama-3.3-70b-versatile` (Groq, free) | 9/9 | ~1,2 s | Ninguno con el *prompt* de `specs/03` |
-| `gemma-3-27b-it` (OpenRouter, free) | 7/9 | ~3,4 s | En `05_bizum_romero` se inventa un concepto; en `02_bizum_jorge` omite el número de apartado |
+| `qwen/qwen3.8-27b` (Groq, free) | **8/8** | **0,27 s** | Ninguno |
+| `openai/gpt-oss-20b` (Groq, free) | **8/8** | 0,58 s | Ninguno |
 
-Se queda Groq por defecto, pero el extractor de respaldo hace que la elección no sea crítica.
+Los dos aciertan igual, pero `qwen/qwen3.8-27b` es el doble de rápido: es el que se usa por
+defecto.
+
+> La capa gratuita de Groq tiene **límite de peticiones**: en una tanda de 8 correos seguidos
+> alguno se rechaza con `Rate limit reached`. Cuando pasa, el flujo **no falla**: el extractor
+> por expresiones regulares responde y el item sale con `origen: "regex"` en vez de
+> `origen: "modelo"`. Por eso el respaldo no es un adorno: es lo que hace que el flujo aguante
+> el límite de la capa gratuita.
+
+Cómo repetir la comparativa:
+
+1. Tener una clave de Groq en la credencial `Modelo - Groq` de n8n.
+2. Cambiar el `model` del nodo *Modelo de lenguaje* (flujos 03, 06 y 14).
+3. `python scripts/probar_flujos.py --flujo 3` y mirar, en cada ejecución, si el `origen` del
+   item es `modelo` o `regex`.
+4. Anotar aciertos y tiempo medio.
+
+Lo que **sí** está comprobado: **sin modelo (o con el límite de la capa gratuita), los nueve
+correos se resuelven igual** y el flujo no falla en ninguno.
 
 ### El *prompt* del flujo
 

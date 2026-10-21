@@ -186,6 +186,12 @@ Este proyecto se ha probado con **n8n 2.44**. Estas son las cosas que fallan en 
 | Buscar por teléfono | La búsqueda `q` de la app es un `LIKE`: `600000001` no está en `600 000 001` | Pedir todos los apartados y filtrar por dígitos en un nodo Code |
 | El trigger de formulario de n8n 2.6 | No se deja publicar si el flujo tiene otra cosa mal | Se sustituyó por un webhook GET que sirve el formulario y otro POST que lo recibe |
 | La query de un webhook | Los nodos HTTP **sustituyen** el item, así que la query se pierde | Léela del nodo que la guardó (`$('Preparar').first().json.query`) |
+| El trigger de Telegram de n8n 2.44 | No se activa: la tarea de activación falla y el flujo queda a medias | Se sustituyó por un webhook normal con `authentication: headerAuth` y el token en la cabecera `X-Telegram-Bot-Api-Secret-Token` (que es lo que manda Telegram) |
+| La URL base de un modelo de lenguaje | En n8n 2.x **no** se pone en el nodo: sale de la credencial (`url`) | `Modelo - Groq` → `url: https://api.groq.com/openai/v1` |
+| El parámetro `model` del nodo de modelo | Es un *resource locator*, no una cadena | `{"__rl": true, "mode": "list", "value": "qwen/qwen3.8-27b"}` |
+| El nodo de Telegram | Su `operation` es `sendMessage`, no `send` | Con `send` la URL sale incompleta y Telegram devuelve 404 |
+| Un proxy que intercepta el TLS | n8n (que usa axios) no se fía y falla con `self-signed certificate in certificate chain` | `NODE_TLS_REJECT_UNAUTHORIZED=0` (solo desarrollo) o `NODE_EXTRA_CA_CERTS` |
+| Las credenciales por tipo | Hay dos `httpHeaderAuth` (la de la API y la del token del bot) y el tipo no basta | El enlazador mira el nodo **y** el tipo |
 | `const` usado antes de declararse | En el nodo Code da `Cannot access 'x' before initialization` | Decláralo al principio del código |
 
 ## 10. Cómo se trabaja: Spec-Driven Development

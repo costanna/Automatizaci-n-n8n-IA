@@ -157,7 +157,7 @@
     {
       "parameters": {
         "resource": "message",
-        "operation": "send",
+        "operation": "sendMessage",
         "chatId": "={{ $json.chat_id }}",
         "text": "={{ $json.cuerpo }}",
         "additionalFields": {},

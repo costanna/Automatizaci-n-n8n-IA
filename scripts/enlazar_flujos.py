@@ -58,6 +58,20 @@ DESTINOS = {
 }
 
 # Credenciales que usan los flujos -> nombre que deben tener en n8n.
+#
+# Ojo: hay dos credenciales de tipo httpHeaderAuth (la de la API de la tienda y la
+# del token del bot de Telegram), así que el tipo no basta: se mira también el nodo.
+CREDENCIALES_POR_NODO = {
+    ("Telegram Trigger", "httpHeaderAuth"): "Telegram - Token del bot",
+    ("Tienda - API", "httpHeaderAuth"): "Tienda - API",
+    ("Enviar email", "smtp"): "SMTP - Paso Firme",
+    ("Enviar Telegram", "telegramApi"): "Telegram - Paso Firme",
+    ("Responder en Telegram", "telegramApi"): "Telegram - Paso Firme",
+    ("Correo del banco", "imap"): "Banco - IMAP",
+    ("Modelo de lenguaje", "openAiApi"): "Modelo - Groq",
+}
+
+# Valor por defecto si el nodo no esta en la lista de arriba.
 CREDENCIALES = {
     "httpHeaderAuth": "Tienda - API",
     "smtp": "SMTP - Paso Firme",
@@ -177,12 +191,13 @@ def enlazar(flujo: dict, ids_flujos: dict[str, str], ids_cred: dict[str, str]) -
             break
     for nodo in flujo.get("nodes", []):
         for tipo, cred in (nodo.get("credentials") or {}).items():
-            if tipo in CREDENCIALES:
-                nombre = CREDENCIALES[tipo]
-                real = ids_cred.get(nombre)
-                if real and cred.get("id") != real:
-                    nodo["credentials"][tipo] = {"id": real, "name": nombre}
-                    cambios = True
+            nombre = CREDENCIALES_POR_NODO.get((nodo.get("name"), tipo)) or CREDENCIALES.get(tipo)
+            if not nombre:
+                continue
+            real = ids_cred.get(nombre)
+            if real and cred.get("id") != real:
+                nodo["credentials"][tipo] = {"id": real, "name": nombre}
+                cambios = True
     return cambios
 
 
