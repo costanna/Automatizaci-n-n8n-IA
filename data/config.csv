@@ -5,3 +5,4 @@ EMAIL_MARISA,marisa@pasofirme.example
 EMAIL_TIENDA,tienda@pasofirme.example
 WEBHOOK_TOKEN,paso-firme-token-local-2026
 TELEGRAM_ADMIN_ID,999999
+TELEGRAM_SECRET_TOKEN,paso-firme-token-bot-2026
