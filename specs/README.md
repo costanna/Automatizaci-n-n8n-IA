@@ -1,8 +1,8 @@
 # Specs · Spec-Driven Development
 
 Cada automatización se define aquí **antes** de programarla: disparador, entradas, salidas, casos
-de error y criterios de aceptación. El agente de IA y el equipo comparten este vocabulario para no
-inventar conceptos.
+de error y criterios de aceptación. Todo el equipo (y quien automate sobre este código) comparte
+este vocabulario para no inventar conceptos.
 
 ## Onde está cada cosa
 

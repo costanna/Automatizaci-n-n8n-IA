@@ -27,9 +27,9 @@ reutilizables, sus specs, sus pruebas y la documentación.
 - `02 · Recibo de abono`: recibo con el importe pagado y lo pendiente; si el apartado queda
   liquidado, el mensaje cambia y avisa de que puede recoger los zapatos.
 - `03 · Abonos a distancia`: lee los avisos del banco, extrae ordenante, importe y concepto (con
-  IA y con un extractor de respaldo), busca el apartado por API y registra el abono. Si hay
+  un modelo de lenguaje y con un extractor de respaldo), busca el apartado por API y registra el abono. Si hay
   dudas, paga de más o está fuera de plazo, no registra nada y pregunta a Marisa.
-- `04 · Aviso de venta grande`: avisa de las ventas por encima de `$vars.UMBRAL_VENTA_GRANDE`.
+- `04 · Aviso de venta grande`: avisa de las ventas por encima de `$env.UMBRAL_VENTA_GRANDE`.
 - `05 · Cierre diario`: cada noche, ventas, abonos y total desglosados por forma de pago.
 - `06 · Recordatorios y vencimientos`: recuerda los vencimientos (7 y 1 días), vence por API los
   apartados fuera de plazo, avisa del vale y manda a la tienda la lista de zapatos que vuelven.
@@ -51,9 +51,9 @@ reutilizables, sus specs, sus pruebas y la documentación.
 
 - `specs/`: la ontología del dominio y la especificación de cada automatización, con sus
   criterios de aceptación.
-- `AGENTS.md`: el contexto que se le da al agente de IA, con las trampas de n8n 2.x.
+- `AGENTS.md`: el contexto del proyecto, con las reglas del negocio y las trampas de n8n 2.x.
 - `docs/`: mapa del proceso (antes y después), kanban, credenciales, guía de importación,
-  bitácora de IA y retrospectiva.
+  bitácora técnica y retrospectiva.
 - `scripts/enlazar_flujos.py`: importa los flujos en n8n y resuelve los ids de subflujos y
   credenciales de la instancia.
 - `scripts/validar_flujos.py`: valida los JSON y busca credenciales escritas dentro.

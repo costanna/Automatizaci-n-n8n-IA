@@ -17,7 +17,7 @@ el cierre de caja y el informe mensual dejo de depender de que alguien se acuerd
 - **Que las cifras las calcule la app.** Al principio el flujo 3 recalmaba `pendiente` a mano.
   Se quitó en cuanto vimos que la app ya lo trae. Es la regla que más tiempo nos ha ahorrado
   después.
-- **Un extractor de respaldo en el flujo 3.** Cuando el modelo de IA no estaba disponible, el
+- **Un extractor de respaldo en el flujo 3.** Cuando el modelo no estaba disponible, el
   flujo siguió funcionando con las expresiones regulares. Fue lo que nos permitió probar los 9
   correos sin depender de ninguna clave externa.
 - **Probar de verdad, no de palabra.** Con el servidor SMTP de desarrollo, cada prueba deja un
@@ -98,7 +98,7 @@ el cierre de caja y el informe mensual dejo de depender de que alguien se acuerd
 ## Lo que queda fuera
 
 - 🟠 El asistente de Telegram (HU-11 y HU-12): la arquitectura ya está preparada
-  (`SUB · Notificar` acepta los dos canales y `$vars.CHAT_ID_MARISA`), pero falta el nodo de IA.
+  (`SUB · Notificar` acepta los dos canales), pero falta el nodo de modelo de lenguaje.
 - 🟠 La entrada automática de datos (HU-13).
 - 🟠 El panel para Marisa (HU-15) y el despliegue con HTTPS y CI (HU-16).
 - La API de la tienda no expone un histórico de estados: el informe mensual aproxima los
