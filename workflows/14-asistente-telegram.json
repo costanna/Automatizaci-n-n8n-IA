@@ -3,26 +3,28 @@
   "nodes": [
     {
       "parameters": {
-        "updates": [
-          "message"
-        ],
-        "additionalFields": {},
+        "httpMethod": "POST",
+        "path": "telegram",
+        "responseMode": "onReceived",
+        "authentication": "headerAuth",
         "options": {}
       },
       "id": "f1000011-0000-4000-8000-000000000011",
       "name": "Telegram Trigger",
-      "type": "n8n-nodes-base.telegramTrigger",
-      "typeVersion": 1.5,
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
       "position": [
         -820,
         300
       ],
       "credentials": {
-        "telegramApi": {
-          "id": "CWn7C1SMM9wlF0tU",
-          "name": "Telegram - Paso Firme"
+        "httpHeaderAuth": {
+          "id": "oh1cKwuwjtgM2jPE",
+          "name": "Telegram - Token del bot"
         }
-      }
+      },
+      "webhookId": "f1400002-0000-4000-8000-000000000002",
+      "notes": "Recibe los updates de Telegram (lo que el bot envia). El token va en la cabecera X-Telegram-Bot-Api-Secret-Token, como hace Telegram. Para conectar un bot de verdad: scripts/conectar_bot_telegram.sh"
     },
     {
       "parameters": {
@@ -64,7 +66,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Normaliza el mensaje de Telegram y decide de quien es.\n//\n// - Si el chat es el de la tienda (TELEGRAM_ADMIN_ID), es una consulta de negocio.\n// - Si no, es un cliente: se busca su telefono (en los datos estaticos del flujo,\n//   donde queda apuntado el chat) o se le pide.\nconst config = {};\nfor (const item of $('Parsear configuracion').all()) {\n  const clave = String(item.json?.clave ?? '').trim();\n  const valor = String(item.json?.valor ?? '').trim();\n  if (clave) config[clave] = valor;\n}\n\nconst telegram = $('Telegram Trigger').first().json ?? {};\n// El disparador de Telegram entrega el mensaje directamente; el de prueba (webhook)\n// lo lleva dentro de 'body'.\nconst mensaje = telegram.message ?? telegram.body?.message ?? telegram;\nconst chat_id = String(mensaje.chat?.id ?? telegram.chat?.id ?? '').trim();\nconst texto = String(mensaje.text ?? telegram.text ?? '').trim();\nconst nombre = String(mensaje.from?.first_name ?? telegram.from?.first_name ?? '').trim();\n\nconst admin = String(config.TELEGRAM_ADMIN_ID ?? '').trim();\nconst es_tienda = admin.length > 0 && chat_id === admin;\n\n// Telefono apuntado a este chat (el bot lo guarda la primera vez).\nconst staticData = $getWorkflowStaticData('global');\nstaticData.telegram = staticData.telegram ?? {};\nconst apuntado = String(staticData.telegram[chat_id] ?? '').trim();\n\n// Si el cliente escribe un telefono de 9 digitos, se apunta.\nconst digitos = (texto.match(/\\d/g) || []).join('');\nconst telefonoEnElMensaje = digitos.length === 9 ? digitos : '';\nconst telefono = apuntado || telefonoEnElMensaje;\n\nif (!apuntado && telefonoEnElMensaje) {\n  staticData.telegram[chat_id] = telefonoEnElMensaje;\n}\n\nreturn [{\n  json: {\n    chat_id,\n    nombre,\n    texto,\n    es_tienda,\n    telefono,\n    telefone_nuevo: !apuntado && telefonoEnElMensaje ? telefonoEnElMensaje : '',\n    admin_configurado: admin.length > 0,\n  },\n}];\n"
+        "jsCode": "// Normaliza el mensaje de Telegram y decide de quien es.\n//\n// - Si el chat es el de la tienda (TELEGRAM_ADMIN_ID), es una consulta de negocio.\n// - Si no, es un cliente: se busca su telefono (en los datos estaticos del flujo,\n//   donde queda apuntado el chat) o se le pide.\nconst config = {};\nfor (const item of $('Parsear configuracion').all()) {\n  const clave = String(item.json?.clave ?? '').trim();\n  const valor = String(item.json?.valor ?? '').trim();\n  if (clave) config[clave] = valor;\n}\n\n// Telegram manda el update en el cuerpo del webhook.\nconst telegram = $('Telegram Trigger').first().json ?? {};\nconst cuerpoBruto = telegram.body ?? telegram;\nconst mensaje = cuerpoBruto.message ?? cuerpoBruto;\nconst chat_id = String(mensaje.chat?.id ?? telegram.chat?.id ?? '').trim();\nconst texto = String(mensaje.text ?? telegram.text ?? '').trim();\nconst nombre = String(mensaje.from?.first_name ?? telegram.from?.first_name ?? '').trim();\n\nconst admin = String(config.TELEGRAM_ADMIN_ID ?? '').trim();\nconst es_tienda = admin.length > 0 && chat_id === admin;\n\n// Telefono apuntado a este chat (el bot lo guarda la primera vez).\nconst staticData = $getWorkflowStaticData('global');\nstaticData.telegram = staticData.telegram ?? {};\nconst apuntado = String(staticData.telegram[chat_id] ?? '').trim();\n\n// Si el cliente escribe un telefono de 9 digitos, se apunta.\nconst digitos = (texto.match(/\\d/g) || []).join('');\nconst telefonoEnElMensaje = digitos.length === 9 ? digitos : '';\nconst telefono = apuntado || telefonoEnElMensaje;\n\nif (!apuntado && telefonoEnElMensaje) {\n  staticData.telegram[chat_id] = telefonoEnElMensaje;\n}\n\nreturn [{\n  json: {\n    chat_id,\n    nombre,\n    texto,\n    es_tienda,\n    telefono,\n    telefone_nuevo: !apuntado && telefonoEnElMensaje ? telefonoEnElMensaje : '',\n    admin_configurado: admin.length > 0,\n  },\n}];\n"
       },
       "id": "f1000003-0000-4000-8000-000000000003",
       "name": "Normalizar el mensaje",
@@ -248,9 +250,13 @@
     },
     {
       "parameters": {
-        "model": "llama-3.3-70b-versatile",
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "qwen/qwen3.8-27b"
+        },
         "options": {
-          "model": "llama-3.3-70b-versatile",
+          "model": "qwen/qwen3.8-27b",
           "baseURL": "https://api.groq.com/openai/v1",
           "temperature": 0
         }
@@ -318,7 +324,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Comprueba que la respuesta redactada lleva las cifras que han salido de la API.\n// Si el modelo ha cambiado oinventado algun importe, se usa la respuesta segura.\n//\n// Asi el modelo redacta el tono, pero las cifras son siempre las de la tienda.\nconst entrada = $input.first().json ?? {};\nconst segura = String(entrada.respuesta_segura ?? '');\nconst cifras = entrada.cifras ?? [];\n\nconst redactado = String(entrada.output ?? entrada.text ?? '').trim();\nconst normalizar = (t) => String(t).replace(/\\s/g, '').replace(',', '.');\nconst enElTexto = normalizar(redactado);\n\nconst faltan = cifras.filter((c) => !enElTexto.includes(normalizar(c)));\n\nconst respuesta = redactado && faltan.length === 0 ? redactado : segura;\n\nreturn [{\n  json: {\n    respuesta,\n    redaccion: redactado && faltan.length === 0 ? 'aceptada' : 'sustituida',\n    cifras_faltantes: faltan,\n    chat_id: entrada.chat_id ?? '',\n  },\n}];\n"
+        "jsCode": "// Comprueba que la respuesta redactada lleva las cifras que han salido de la API.\n// Si el modelo ha cambiado o inventado algun importe, se usa la respuesta segura.\n//\n// Asi el modelo redacta el tono, pero las cifras son siempre las de la tienda.\n//\n// Ojo: el item que llega aqui es el del modelo (solo trae su texto), asi que las\n// cifras, la respuesta segura y el chat se recuperan del nodo que los preparo.\nconst entrada = $input.first().json ?? {};\nconst preparacion = $('Preparar respuesta del cliente').first().json ?? {};\n\nconst segura = String(preparacion.respuesta_segura ?? entrada.respuesta_segura ?? '');\nconst cifras = preparacion.cifras ?? entrada.cifras ?? [];\n\nconst redactado = String(entrada.output ?? entrada.text ?? '').trim();\nconst normalizar = (t) => String(t).replace(/\\s/g, '').replace(',', '.');\nconst enElTexto = normalizar(redactado);\n\nconst faltan = cifras.filter((c) => !enElTexto.includes(normalizar(c)));\n\nconst respuesta = redactado && faltan.length === 0 ? redactado : segura;\n\nreturn [{\n  json: {\n    ...preparacion,\n    ...entrada,\n    respuesta,\n    redaccion: redactado && faltan.length === 0 ? 'aceptada' : 'sustituida',\n    cifras_faltantes: faltan,\n    chat_id: preparacion.chat_id ?? entrada.chat_id ?? '',\n  },\n}];"
       },
       "id": "f100000e-0000-4000-8000-00000000000e",
       "name": "Comprobar las cifras",
@@ -346,7 +352,7 @@
     {
       "parameters": {
         "resource": "message",
-        "operation": "send",
+        "operation": "sendMessage",
         "chatId": "={{ $json.chat_id }}",
         "text": "={{ $json.respuesta }}",
         "additionalFields": {},
@@ -565,5 +571,6 @@
     "executionOrder": "v1"
   },
   "pinData": {},
-  "active": false
+  "active": false,
+  "notes": "El bot de Telegram. El trigger es un webhook que recibe los updates de Telegram con el token en la cabecera; para conectar un bot de verdad, scripts/conectar_bot_telegram.sh"
 }
