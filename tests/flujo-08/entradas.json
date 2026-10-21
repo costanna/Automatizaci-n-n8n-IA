@@ -2,21 +2,32 @@
   "flujo": "08 · Avisos de error",
   "disparador": "Error Trigger (se activa cuando falla otro flujo)",
   "entrada": {
-    "workflow": { "name": "03 · Abonos a distancia" },
+    "workflow": {
+      "name": "03 · Abonos a distancia"
+    },
     "execution": {
       "id": "340",
       "error": {
         "name": "NodeOperationError",
-        "message": "Error de prueba con token sk-fakefakefakefake1234 y apikey=secreto123",
-        "node": { "name": "Registrar abono" },
+        "message": "Error de prueba con token sk-clave-DE-EJEMPLO-NO-REAL y apikey=secreto-de-ejemplo",
+        "node": {
+          "name": "Registrar abono"
+        },
         "timestamp": "2026-10-20T23:00:00.000Z"
       }
     }
   },
   "resultado_esperado": {
     "email_enviado_a": "marisa@pasofirme.example",
-    "debe_contener": ["03 · Abonos a distancia", "Registrar abono", "Error de prueba"],
-    "no_debe_contener": ["sk-fakefakefakefake1234", "secreto123"],
+    "debe_contener": [
+      "03 · Abonos a distancia",
+      "Registrar abono",
+      "Error de prueba"
+    ],
+    "no_debe_contener": [
+      "sk-clave-DE-EJEMPLO-NO-REAL",
+      "secreto-de-ejemplo"
+    ],
     "las_claves_se_limpian": true
   }
 }
