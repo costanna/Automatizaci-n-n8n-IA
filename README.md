@@ -224,6 +224,7 @@ configuración, en **Variables**. La lista completa está en
 | [`docs/credenciales.md`](docs/credenciales.md) | Credenciales y variables que necesita cada flujo |
 | [`docs/como-importar-flujos.md`](docs/como-importar-flujos.md) | Cómo importarlos, configurarlos y probarlos |
 | [`docs/bitacora.md`](docs/bitacora.md) | Bitácora técnica: decisiones, modelos y fallos corregidos |
+| [`docs/ai-log.md`](docs/ai-log.md) | Bitácora de IA: herramienta, modelos, prompts y correcciones |
 | [`docs/retrospectiva.md`](docs/retrospectiva.md) | Retrospectiva del equipo |
 | [`docs/despliegue.md`](docs/despliegue.md) | Despliegue en la nube con HTTPS y copias de seguridad |
 | [`AGENTS.md`](AGENTS.md) | Contexto del proyecto: reglas del negocio y trampas de n8n |
