@@ -28,15 +28,18 @@ Que Marisa se entere de las ventas grandes aunque no esté en la tienda.
 
 ## Pasos
 
-1. **Comprobar el umbral** (If): compara `datos.importe` con la variable de n8n
-   `$vars.UMBRAL_VENTA_GRANDE` (por defecto **200 €**). Cambiar el umbral se hace en
-   *Settings → Variables*, **sin tocar el flujo** (criterio de HU-09).
+1. **Leer la configuración** (Read Binary File + Spreadsheet File): el umbral sale de
+   `data/config.csv`.
+2. **Cruzar con la venta** (Code): une el umbral con la venta.
+3. **Comprobar el umbral** (If): compara `datos.importe` con el umbral leído (por defecto
+   **200 €**). Cambiar el umbral se hace editando `data/config.csv`, **sin tocar el flujo**
+   (criterio de HU-09).
 2. **Preparar aviso** (Code): mensaje con el concepto, el importe, la forma de pago y la fecha.
 3. **Enviar a Marisa** (email; opcionalmente Telegram).
 
 ## Reglas
 
-- El umbral vive en una **variable de n8n**, no en el JSON del flujo.
+- El umbral vive en `data/config.csv`, no en el JSON del flujo.
 - El importe es el de la API, no se recalcula.
 - R-A7: el aviso no incluye datos de otros clientes.
 
@@ -44,7 +47,7 @@ Que Marisa se entere de las ventas grandes aunque no esté en la tienda.
 
 | Caso | Comportamiento |
 |---|---|
-| La variable no existe | Se usa 200 € por defecto (`$vars.UMBRAL_VENTA_GRANDE \|\| 200`) |
+| La variable no existe | Se usa 200 € por defecto (`$env.UMBRAL_VENTA_GRANDE \|\| 200`) |
 | Fallo al enviar el aviso | Se captura con *On Error → Continue*; lo reporta el Error Workflow si el flujo está configurado con él |
 
 ## Criterios de aceptación

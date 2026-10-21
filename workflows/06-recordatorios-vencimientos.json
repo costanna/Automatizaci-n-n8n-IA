@@ -52,7 +52,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Clasifica los apartados activos en tres grupos (HU-06 y HU-07):\n//   - los que hay que recordar (su plazo vence dentro de los dias de aviso)\n//   - los que ya estan fuera de plazo y hay que vencer\n//   - los demas\n//\n// Los dias de aviso vienen de la variable DIAS_AVISO_VENCIMIENTO (7 y 1 por defecto).\n// Ningun importe se recalcula: pendiente y fecha_limite son los de la API.\nconst apartados = $input.all().flatMap((i) => (Array.isArray(i.json) ? i.json : [i.json])).filter((a) => a && a.id !== undefined);\n\nconst hoy = new Intl.DateTimeFormat('en-CA', {\n  timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',\n}).format(new Date());\n\nconst diasAviso = String($vars.DIAS_AVISO_VENCIMIENTO || '7,1')\n  .split(',').map((n) => Number(String(n).trim())).filter((n) => Number.isFinite(n));\n\nconst diasQueFaltan = (fechaLimite) => Math.round(\n  (new Date(String(fechaLimite) + 'T00:00:00Z').getTime() - new Date(hoy + 'T00:00:00Z').getTime()) / 86400000,\n);\n\nconst recordatorios = [];\nconst vencimientos = [];\nfor (const a of apartados) {\n  if (!a.fecha_limite) continue;\n  const dias = diasQueFaltan(a.fecha_limite);\n  if (diasAviso.includes(dias)) recordatorios.push({ apartado: a, dias, clave: a.id + ':' + dias });\n  else if (dias < 0) vencimientos.push({ apartado: a, dias, clave: a.id + ':vencido' });\n}\n\nreturn [{ json: { hoy, apartados: apartados.length, recordatorios, vencimientos } }];\n"
+        "jsCode": "// Lee la configuracion de data/config.csv (clave,valor).\n// Vive en un fichero y no en el flujo: se cambia sin tocar el flujo.\nconst config = {};\nfor (const item of $('Parsear configuracion').all()) {\n  const clave = String(item.json?.clave ?? '').trim();\n  const valor = String(item.json?.valor ?? '').trim();\n  if (clave) config[clave] = valor;\n}\n// Clasifica los apartados activos en tres grupos (HU-06 y HU-07):\n//   - los que hay que recordar (su plazo vence dentro de los dias de aviso)\n//   - los que ya estan fuera de plazo y hay que vencer\n//   - los demas\n//\n// Los dias de aviso vienen de la variable DIAS_AVISO_VENCIMIENTO (7 y 1 por defecto).\n// Ningun importe se recalcula: pendiente y fecha_limite son los de la API.\n// Los apartados vienen del nodo que los pidio a la API (este nodo recibe la\n// configuracion, que va por delante).\nconst apartados = $('Apartados activos').all()\n  .flatMap((i) => (Array.isArray(i.json) ? i.json : [i.json]))\n  .filter((a) => a && a.id !== undefined);\n\nconst hoy = new Intl.DateTimeFormat('en-CA', {\n  timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',\n}).format(new Date());\n\n// Los dias de aviso salen del fichero de configuracion (data/config.csv).\nconst diasAviso = String(config.DIAS_AVISO_VENCIMIENTO || '7,1')\n  .split(',').map((n) => Number(String(n).trim())).filter((n) => Number.isFinite(n));\n\nconst diasQueFaltan = (fechaLimite) => Math.round(\n  (new Date(String(fechaLimite) + 'T00:00:00Z').getTime() - new Date(hoy + 'T00:00:00Z').getTime()) / 86400000,\n);\n\nconst recordatorios = [];\nconst vencimientos = [];\nfor (const a of apartados) {\n  if (!a.fecha_limite) continue;\n  const dias = diasQueFaltan(a.fecha_limite);\n  if (diasAviso.includes(dias)) recordatorios.push({ apartado: a, dias, clave: a.id + ':' + dias });\n  else if (dias < 0) vencimientos.push({ apartado: a, dias, clave: a.id + ':vencido' });\n}\n\nreturn [{ json: { hoy, apartados: apartados.length, recordatorios, vencimientos } }];\n"
       },
       "id": "0c27bf49-091c-470d-95d1-7f8627c3ee3f",
       "name": "Clasificar apartados",
@@ -189,6 +189,44 @@
         1060,
         340
       ]
+    },
+    {
+      "parameters": {
+        "filePath": "/datos/config.csv",
+        "dataPropertyName": "data"
+      },
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "onError": "continueRegularOutput",
+      "notes": "La configuracion vive en data/config.csv: se cambia sin tocar el flujo.",
+      "name": "Leer configuracion",
+      "position": [
+        -200,
+        300
+      ],
+      "id": "c0f07862-0000-4000-8000-000000000000"
+    },
+    {
+      "parameters": {
+        "operation": "fromFile",
+        "binaryPropertyName": "data",
+        "fileFormat": "csv",
+        "options": {
+          "delimiter": ",",
+          "headerRow": true,
+          "rawData": true,
+          "includeEmptyCells": true
+        }
+      },
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 2,
+      "onError": "continueRegularOutput",
+      "name": "Parsear configuracion",
+      "position": [
+        -20,
+        300
+      ],
+      "id": "c0f01455-0000-4000-8000-000000000000"
     }
   ],
   "connections": {
@@ -207,7 +245,7 @@
       "main": [
         [
           {
-            "node": "Clasificar apartados",
+            "node": "Leer configuracion",
             "type": "main",
             "index": 0
           }
@@ -284,6 +322,28 @@
         [
           {
             "node": "Avisar el vale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer configuracion": {
+      "main": [
+        [
+          {
+            "node": "Parsear configuracion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear configuracion": {
+      "main": [
+        [
+          {
+            "node": "Clasificar apartados",
             "type": "main",
             "index": 0
           }

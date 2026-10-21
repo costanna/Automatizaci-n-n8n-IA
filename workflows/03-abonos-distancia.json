@@ -110,7 +110,7 @@
         "hasOutputParser": false
       },
       "id": "8a25292c-a49f-4f1b-bce0-074e580453ef",
-      "name": "Extraer con IA",
+      "name": "Extraer los datos",
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.5,
       "position": [
@@ -118,19 +118,19 @@
         60
       ],
       "onError": "continueRegularOutput",
-      "notes": "La IA solo extrae. La decision la toma el flujo con los datos de la API."
+      "notes": "El modelo solo extrae los datos. La decision la toma el flujo con lo que devuelve la API de la tienda."
     },
     {
       "parameters": {
-        "model": "={{ $vars.IA_MODEL || 'llama-3.3-70b-versatile' }}",
+        "model": "llama-3.3-70b-versatile",
         "options": {
-          "baseURL": "={{ $vars.IA_BASE_URL || 'https://api.groq.com/openai/v1' }}",
-          "model": "={{ $vars.IA_MODEL || 'llama-3.3-70b-versatile' }}",
+          "baseURL": "https://api.groq.com/openai/v1",
+          "model": "llama-3.3-70b-versatile",
           "temperature": 0
         }
       },
       "id": "a0b3cd28-6974-44ac-8df6-3bc1a435e490",
-      "name": "Modelo IA",
+      "name": "Modelo de lenguaje",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
@@ -140,14 +140,15 @@
       "credentials": {
         "openAiApi": {
           "id": "202d04aa-6343-452a-8f99-9cbdbe339e28",
-          "name": "IA - Groq"
+          "name": "Modelo - Groq"
         }
-      }
+      },
+      "notes": "Modelo de lenguaje que extrae los datos del aviso. Se cambia aqui, en el propio nodo (modelo y URL base). El extractor de expresiones regulares del nodo siguiente actua de respaldo si este nodo no esta configurado."
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Lee lo que devuelve la IA y lo normaliza.\n// Si la IA no esta disponible o no devuelve un JSON utilizable, entra el extractor\n// determinista por expresiones regulares: el flujo no se queda nunca sin datos.\nconst entrada = $input.first().json ?? {};\nconst textoOriginal = $('Normalizar correo').first().json?.texto ?? '';\n\n// Convierte '10,00' / '1.842,30' / '10.00' en numero.\nconst aNumero = (bruto) => {\n  if (bruto === null || bruto === undefined) return null;\n  let s = String(bruto).trim().replace(/\\s/g, '').replace(/[^0-9.,]/g, '');\n  if (!s) return null;\n  const coma = s.lastIndexOf(',');\n  const punto = s.lastIndexOf('.');\n  if (coma >= 0 && punto >= 0) {\n    s = coma > punto ? s.replace(/\\./g, '').replace(',', '.') : s.replace(/,/g, '');\n  } else if (coma >= 0) {\n    s = s.replace(',', '.');\n  } else if (punto >= 0) {\n    const decimales = s.length - punto - 1;\n    if (decimales === 3 && s.split('.').length > 2) s = s.replace(/\\./g, '');\n  }\n  const n = Number(s);\n  return Number.isFinite(n) ? n : null;\n};\n\n// Extractor determinista: mismo contrato que la IA, pero sin modelo.\nconst extraerPorRegex = (texto) => {\n  const t = String(texto ?? '');\n  // Ojo: [ \\t] en vez de \\s, para no leer la linea siguiente cuando el campo va vacio\n  // (por ejemplo 'Concepto:' sin nada despues).\n  const mImporte = t.match(/importe[ \\t]*[:.]*[ \\t]*([0-9][0-9.,]*)[ \\t]*(?:eur|€)/i)\n    || t.match(/bizum de[ \\t]*([0-9][0-9.,]*)[ \\t]*€/i)\n    || t.match(/([0-9][0-9.,]*)[ \\t]*(?:eur|€)/i);\n  const mOrdenante = t.match(/ordenante[ \\t]*[:.]+[ \\t]*(.+)/i);\n  const mConcepto = t.match(/concepto[ \\t]*[:.]+[ \\t]*(.+)/i);\n  return {\n    ordenante: mOrdenante ? mOrdenante[1].trim() : '',\n    importe: mImporte ? aNumero(mImporte[1]) : null,\n    concepto: mConcepto ? mConcepto[1].trim() : '',\n  };\n};\n\nlet datos = null;\nlet origen = 'regex';\nconst respuesta = String(entrada.text ?? entrada.output ?? entrada.response ?? '');\nconst limpio = respuesta.replace(/```json/gi, '').replace(/```/g, '').trim();\nconst inicio = limpio.indexOf('{');\nconst fin = limpio.lastIndexOf('}');\nif (inicio >= 0 && fin > inicio) {\n  try {\n    const parseado = JSON.parse(limpio.slice(inicio, fin + 1));\n    if (parseado && typeof parseado === 'object') {\n      datos = parseado;\n      origen = 'ia';\n    }\n  } catch (e) {\n    datos = null;\n  }\n}\n\nif (!datos) datos = extraerPorRegex(textoOriginal);\n\nconst importe = aNumero(datos.importe);\nconst ordenante = String(datos.ordenante ?? '').trim();\nconst concepto = String(datos.concepto ?? '').trim();\n\nif (!ordenante || !importe || importe <= 0) {\n  // Ni la IA ni el regex han sido capaces: no se inventa nada, se avisa a Marisa.\n  return [{ json: { ordenante, importe, concepto, origen, no_se_puede_interpretar: true, texto: textoOriginal } }];\n}\n\nreturn [{ json: { ordenante, importe, concepto, origen, no_se_puede_interpretar: false, texto: textoOriginal } }];\n"
+        "jsCode": "// Lee lo que devuelve el modelo y lo normaliza.\n// Si el modelo no esta disponible o no devuelve un JSON utilizable, entra el extractor\n// determinista por expresiones regulares: el flujo no se queda nunca sin datos.\nconst entrada = $input.first().json ?? {};\nconst textoOriginal = $('Normalizar correo').first().json?.texto ?? '';\n\n// Convierte '10,00' / '1.842,30' / '10.00' en numero.\nconst aNumero = (bruto) => {\n  if (bruto === null || bruto === undefined) return null;\n  let s = String(bruto).trim().replace(/\\s/g, '').replace(/[^0-9.,]/g, '');\n  if (!s) return null;\n  const coma = s.lastIndexOf(',');\n  const punto = s.lastIndexOf('.');\n  if (coma >= 0 && punto >= 0) {\n    s = coma > punto ? s.replace(/\\./g, '').replace(',', '.') : s.replace(/,/g, '');\n  } else if (coma >= 0) {\n    s = s.replace(',', '.');\n  } else if (punto >= 0) {\n    const decimales = s.length - punto - 1;\n    if (decimales === 3 && s.split('.').length > 2) s = s.replace(/\\./g, '');\n  }\n  const n = Number(s);\n  return Number.isFinite(n) ? n : null;\n};\n\n// Extractor determinista: mismo contrato que el modelo, pero sin modelo.\nconst extraerPorRegex = (texto) => {\n  const t = String(texto ?? '');\n  // Ojo: [ \\t] en vez de \\s, para no leer la linea siguiente cuando el campo va vacio\n  // (por ejemplo 'Concepto:' sin nada despues).\n  const mImporte = t.match(/importe[ \\t]*[:.]*[ \\t]*([0-9][0-9.,]*)[ \\t]*(?:eur|€)/i)\n    || t.match(/bizum de[ \\t]*([0-9][0-9.,]*)[ \\t]*€/i)\n    || t.match(/([0-9][0-9.,]*)[ \\t]*(?:eur|€)/i);\n  const mOrdenante = t.match(/ordenante[ \\t]*[:.]+[ \\t]*(.+)/i);\n  const mConcepto = t.match(/concepto[ \\t]*[:.]+[ \\t]*(.+)/i);\n  return {\n    ordenante: mOrdenante ? mOrdenante[1].trim() : '',\n    importe: mImporte ? aNumero(mImporte[1]) : null,\n    concepto: mConcepto ? mConcepto[1].trim() : '',\n  };\n};\n\nlet datos = null;\nlet origen = 'regex';\nconst respuesta = String(entrada.text ?? entrada.output ?? entrada.response ?? '');\nconst limpio = respuesta.replace(/```json/gi, '').replace(/```/g, '').trim();\nconst inicio = limpio.indexOf('{');\nconst fin = limpio.lastIndexOf('}');\nif (inicio >= 0 && fin > inicio) {\n  try {\n    const parseado = JSON.parse(limpio.slice(inicio, fin + 1));\n    if (parseado && typeof parseado === 'object') {\n      datos = parseado;\n      origen = 'modelo';\n    }\n  } catch (e) {\n    datos = null;\n  }\n}\n\nif (!datos) datos = extraerPorRegex(textoOriginal);\n\nconst importe = aNumero(datos.importe);\nconst ordenante = String(datos.ordenante ?? '').trim();\nconst concepto = String(datos.concepto ?? '').trim();\n\nif (!ordenante || !importe || importe <= 0) {\n  // Ni el modelo ni el regex han sido capaces: no se inventa nada, se avisa a Marisa.\n  return [{ json: { ordenante, importe, concepto, origen, no_se_puede_interpretar: true, texto: textoOriginal } }];\n}\n\nreturn [{ json: { ordenante, importe, concepto, origen, no_se_puede_interpretar: false, texto: textoOriginal } }];\n"
       },
       "id": "202d04aa-6343-452a-8f99-9cbdbe339e28",
       "name": "Interpretar la respuesta",
@@ -309,7 +310,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Mensaje para Marisa cuando NO se ha registrado el abono (reglas A2 y A3).\n// No se registra nada: solo se pregunta y se explica el motivo.\nconst d = $input.first().json ?? {};\nconst decision = $('Decidir').first().json ?? {};\nconst emailTienda = $vars.EMAIL_MARISA || 'marisa@pasofirme.example';\nconst euros = (n) => Number(n ?? 0).toFixed(2).replace('.', ',') + ' EUR';\nconst escapar = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nconst MOTIVOS = {\n  importe_excede: 'el importe supera lo que queda pendiente',\n  fuera_de_plazo: 'el apartado esta fuera de plazo',\n  apartado_ambiguo: 'hay varios apartados que pueden ser',\n  cliente_desconocido: 'no coincide con ningun cliente',\n  sin_concepto: 'no se sabe con certeza de quien es',\n  error_tecnico: 'ha habido un problema tecnico',\n};\n\nconst motivo = d.motivo ?? decision.motivo ?? 'error_tecnico';\nconst detalle = d.detalle ?? decision.detalle ?? '';\nconst importe = decision.importe ?? d.importe ?? 0;\nconst apartado = decision.apartado ?? null;\n\nconst cuerpo = [\n  'Hay un pago que no he registrado. Necesito que me digas a que apartado va:',\n  '',\n  'Motivo: ' + (MOTIVOS[motivo] ?? motivo),\n  'Ordenante: ' + (decision.ordenante ?? '(desconocido)'),\n  'Importe: ' + euros(importe),\n  'Concepto: ' + (decision.concepto || '(vacio)'),\n  'Canal: ' + (decision.canal ?? 'bizum'),\n  'Detalle: ' + (detalle || '-'),\n  apartado ? 'Apartado candidato: #' + apartado.id + ' ' + apartado.cliente + ' (pendiente ' + euros(apartado.pendiente) + ')' : 'Apartado candidato: ninguno',\n  '',\n  'No he registrado nada: espero tu confirmacion.',\n].join('\\n');\n\nreturn [{ json: { canal: 'email', email: emailTienda, asunto: 'Pago sin registrar · ' + (MOTIVOS[motivo] ?? motivo), cuerpo, cuerpo_html: '<p>' + escapar(cuerpo).replace(/\\n/g, '<br>') + '</p>' } }];\n"
+        "jsCode": "// Mensaje para Marisa cuando NO se ha registrado el abono (reglas A2 y A3).\n// No se registra nada: solo se pregunta y se explica el motivo.\nconst d = $input.first().json ?? {};\nconst decision = $('Decidir').first().json ?? {};\n// 'tienda' quiere decir 'la direccion de la tienda', que resuelve el\n// subflujo de notificacion con el fichero de configuracion.\nconst emailTienda = 'tienda';\nconst euros = (n) => Number(n ?? 0).toFixed(2).replace('.', ',') + ' EUR';\nconst escapar = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nconst MOTIVOS = {\n  importe_excede: 'el importe supera lo que queda pendiente',\n  fuera_de_plazo: 'el apartado esta fuera de plazo',\n  apartado_ambiguo: 'hay varios apartados que pueden ser',\n  cliente_desconocido: 'no coincide con ningun cliente',\n  sin_concepto: 'no se sabe con certeza de quien es',\n  error_tecnico: 'ha habido un problema tecnico',\n};\n\nconst motivo = d.motivo ?? decision.motivo ?? 'error_tecnico';\nconst detalle = d.detalle ?? decision.detalle ?? '';\nconst importe = decision.importe ?? d.importe ?? 0;\nconst apartado = decision.apartado ?? null;\n\nconst cuerpo = [\n  'Hay un pago que no he registrado. Necesito que me digas a que apartado va:',\n  '',\n  'Motivo: ' + (MOTIVOS[motivo] ?? motivo),\n  'Ordenante: ' + (decision.ordenante ?? '(desconocido)'),\n  'Importe: ' + euros(importe),\n  'Concepto: ' + (decision.concepto || '(vacio)'),\n  'Canal: ' + (decision.canal ?? 'bizum'),\n  'Detalle: ' + (detalle || '-'),\n  apartado ? 'Apartado candidato: #' + apartado.id + ' ' + apartado.cliente + ' (pendiente ' + euros(apartado.pendiente) + ')' : 'Apartado candidato: ninguno',\n  '',\n  'No he registrado nada: espero tu confirmacion.',\n].join('\\n');\n\nreturn [{ json: { canal: 'email', email: emailTienda, asunto: 'Pago sin registrar · ' + (MOTIVOS[motivo] ?? motivo), cuerpo, cuerpo_html: '<p>' + escapar(cuerpo).replace(/\\n/g, '<br>') + '</p>' } }];\n"
       },
       "id": "d8a9acd7-2af6-457a-953c-573244c16303",
       "name": "Preparar aviso a Marisa",
@@ -380,7 +381,7 @@
       "main": [
         [
           {
-            "node": "Extraer con IA",
+            "node": "Extraer los datos",
             "type": "main",
             "index": 0
           }
@@ -394,18 +395,18 @@
         ]
       ]
     },
-    "Modelo IA": {
+    "Modelo de lenguaje": {
       "ai_languageModel": [
         [
           {
-            "node": "Extraer con IA",
+            "node": "Extraer los datos",
             "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "Extraer con IA": {
+    "Extraer los datos": {
       "main": [
         [
           {

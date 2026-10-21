@@ -71,7 +71,7 @@
       |        |                 |                           |                       |
       |        |  aviso del banco (IMAP) -->|  03 abonos a        |                       |
       |        |                          |     distancia        |                       |
-      |        |                          |   IA: extrae         |                       |
+      |        |                          |   el modelo extrae   |                       |
       |        |                          |   flujo: decide      |                       |
       |        |                          |        |             |                       |
       |        |                          |        | POST /api |                       |
@@ -120,7 +120,7 @@ flowchart TD
         I --> M[03 Abonos a distancia]
         I --> N[08 Avisos de error]
 
-        M --> O[IA extrae ordenante, importe y concepto]
+        M --> O[El modelo extrae ordenante, importe y concepto]
         O --> P[Busca el apartado por API]
         P --> Q{Un apartado claro?}
         Q -- no --> R[No se registra: se pregunta a Marisa]

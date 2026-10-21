@@ -1,0 +1,5 @@
+clave,valor
+UMBRAL_VENTA_GRANDE,200
+DIAS_AVISO_VENCIMIENTO,"7,1"
+EMAIL_MARISA,marisa@pasofirme.example
+EMAIL_TIENDA,tienda@pasofirme.example

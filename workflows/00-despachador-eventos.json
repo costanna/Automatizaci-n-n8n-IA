@@ -257,7 +257,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// La app ha mandado un evento que este flujo no conoce. Se avisa a la tienda\n// por si es un fallo de la app, pero no se rompe nada.\nconst entrada = $input.first().json ?? {};\nconst emailTienda = $vars.EMAIL_MARISA || 'marisa@pasofirme.example';\nconst cuerpo = [\n  'La tienda ha avisado de un evento que no conozco:',\n  '',\n  'Evento: ' + (entrada.evento || '(vacio)'),\n  'Datos: ' + JSON.stringify(entrada.datos ?? {}).slice(0, 500),\n].join('\\n');\n\nreturn [{ json: { canal: 'email', email: emailTienda, asunto: 'Evento desconocido de la tienda', cuerpo } }];\n"
+        "jsCode": "// La app ha mandado un evento que este flujo no conoce. Se avisa a la tienda\n// por si es un fallo de la app, pero no se rompe nada.\nconst entrada = $input.first().json ?? {};\n// 'tienda' quiere decir 'la direccion de la tienda', que resuelve el\n// subflujo de notificacion con el fichero de configuracion.\nconst emailTienda = 'tienda';\nconst cuerpo = [\n  'La tienda ha avisado de un evento que no conozco:',\n  '',\n  'Evento: ' + (entrada.evento || '(vacio)'),\n  'Datos: ' + JSON.stringify(entrada.datos ?? {}).slice(0, 500),\n].join('\\n');\n\nreturn [{ json: { canal: 'email', email: emailTienda, asunto: 'Evento desconocido de la tienda', cuerpo } }];\n"
       },
       "id": "6116ec4d-e4d3-4c6f-ae64-25d68f6bb446",
       "name": "Preparar aviso de evento desconocido",

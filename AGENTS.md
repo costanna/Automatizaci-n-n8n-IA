@@ -1,8 +1,10 @@
-# AGENTS.md · Contexto para el agente de IA
+# AGENTS.md · Contexto del proyecto
 
-Este archivo es el **contexto que se le da al agente** antes de pedirle nada. Si el agente no lo
-lee, inventa conceptos, recalcula cifras que ya calcula la app y mete credenciales en los flujos.
- Léelo antes de cada tarea.
+Este archivo es el **contexto de trabajo** de la automatización: qué es el negocio, qué reglas
+se aplican, cómo se habla con la app y qué no se debe tocar. Está pensado para que lo lea
+cualquiera que vaya a tocar el proyecto (persona o herramienta) antes de proponer nada: sin este
+contexto se inventan conceptos, se recalculan cifras que ya calcula la app y se meten
+credenciales en los flujos.
 
 ---
 
@@ -61,14 +63,14 @@ JSON del flujo.
 
 ## 5. La regla de oro de este proyecto
 
-> **Las cifras las calcula la app. n8n las lee, las copia y las suma. El modelo de IA redacta el
-> texto, nunca calcula dinero.**
+> **Las cifras las calcula la app. n8n las lee, las copia y las suma. El modelo redacta el texto,
+> nunca calcula dinero.**
 
 - `abonado` y `pendiente` **nunca** se recalculan en n8n: se copian de la API.
 - En los mensajes, el importe va tal cual lo devuelve la API.
 - Lo único que el flujo puede hacer con las cifras es **sumarlas** (cierre diario, informe
   mensual, total pendiente).
-- Un modelo de IA **no** recibe cifras para que las interprete: recibe el texto ya compuesto, o
+- Un modelo **no** recibe cifras para que las interprete: recibe el texto ya compuesto, o
   solo el texto del correo en el flujo 3.
 
 ## 6. Convenciones de este repo
@@ -132,10 +134,10 @@ mensajes ni en los logs. Las credenciales viven en n8n:
 | `Gmail - Paso Firme` | Gmail OAuth2 | Enviar correos |
 | `Banco - IMAP` | IMAP | Leer los avisos del banco |
 | `Telegram - Paso Firme` | Telegram API | Avisos a Marisa y a clientes |
-| `IA - Groq` | OpenAI compatible | Extraer datos del correo (flujo 3) |
+| `Modelo - Groq` | OpenAI compatible | Extraer datos del correo (flujo 3) |
 | `Histórico - Sheets` | Google Sheets | Histórico de cierres y avisos |
 
-**Variables** (n8n → Settings → Variables), que se leen con `$vars.NOMBRE`:
+**Configuración** (`data/config.csv`), que los flujos leen en cada ejecución:
 
 | Variable | Por defecto | Para qué |
 |---|---|---|
@@ -143,14 +145,19 @@ mensajes ni en los logs. Las credenciales viven en n8n:
 | `EMAIL_MARISA` | `marisa@pasofirme.example` | A quién se avisa a la tienda |
 | `DIAS_AVISO_VENCIMIENTO` | `7,1` | Cuántos días antes se avisa (HU-06) |
 
-## 9. Qué **no** debe hacer el agente
+> La configuración está en [`data/config.csv`](data/config.csv), **no** en los flujos: se cambia
+> editando el fichero, sin tocar el JSON ni republicar nada. No se usan las variables de n8n
+> (`$vars`) porque en la edición comunitaria no existen, ni `$env`, porque n8n 2.x lo bloquea en
+> las expresiones.
+
+## 9. Qué **no** se debe hacer
 
 1. **No** modificar `backend/` ni `frontend/`: la app es de la plataforma.
 2. **No** escribir claves, tokens ni contraseñas en ningún fichero.
 3. **No** activar flujos en producción sin que lo revise una persona.
 4. **No** recalcular `abonado` ni `pendiente` en n8n.
-5. **No** enviar datos personales a un modelo de IA que no sean imprescindibles (en el flujo 3 solo
-   va el texto del correo).
+5. **No** enviar datos personales a un modelo externo que no sean imprescindibles (en el flujo 3
+   solo va el texto del correo).
 6. **No** borrar datos ni borrar flujos que no hayas creado tú.
 7. **No** cambiar el contrato de la API (URL, cabeceras, nombres de campos) sin actualizar la spec.
 
@@ -199,5 +206,5 @@ python scripts/validar_flujos.py
 
 ## 12. Resumen en una línea
 
-> La tienda apunta con los datos; n8n avisa, recuerda, cierra caja e informa; la IA solo extrae
+> La tienda apunta con los datos; n8n avisa, recuerda, cierra caja e informa; el modelo solo extrae
 > datos y redacta; **las cifras y las reglas son de la app**.

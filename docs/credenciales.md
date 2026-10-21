@@ -1,8 +1,9 @@
 # Credenciales y variables
 
 > **Ninguna credencial vive en este repositorio.** Las claves se crean en n8n
-> (*Credentials → New*) y los valores de configuración, en *Settings → Variables*.
-> Ni en los JSON de los flujos ni en los mensajes ni en los logs hay claves.
+> (*Credentials → New*) y la configuración de los flujos está en
+> [`data/config.csv`](../data/config.csv). Ni en los JSON de los flujos ni en los mensajes ni en
+> los logs hay claves.
 
 ## 1. Credenciales que necesita cada flujo
 
@@ -12,7 +13,7 @@
 | `SMTP - Paso Firme` | **SMTP** | Host, puerto, usuario y contraseña del correo saliente | `sub-notificar` (envío de todos los mensajes) |
 | `Banco - IMAP` | **IMAP** | Host, puerto, usuario y contraseña del buzón del banco | `03 · Abonos a distancia` (leer los avisos) |
 | `Telegram - Paso Firme` | **Telegram API** | El token del bot | `sub-notificar` (canal opcional) |
-| `IA - Groq` | **OpenAI compatible** | La clave del proveedor (Groq, OpenRouter, Gemini…) y la URL base | `03 · Abonos a distancia` (extraer los datos del aviso) |
+| `Modelo - Groq` | **OpenAI compatible** | La clave del proveedor (Groq, OpenRouter, Gemini…) y la URL base | `03 · Abonos a distancia` (extraer los datos del aviso) |
 | `Gmail - Paso Firme` | **Gmail OAuth2** | La cuenta de Gmail de la tienda | Alternativa al SMTP para enviar |
 
 > **Ningún flujo necesita una credencial de Google Sheets.** El histórico de cierres y el de
@@ -52,7 +53,7 @@
 | User / Password | los del buzón donde llegan los avisos |
 | Mailbox | `INBOX` |
 
-**`IA - Groq` (OpenAI compatible)**
+**`Modelo - Groq` (OpenAI compatible)**
 
 | Campo | Valor |
 |---|---|
@@ -63,23 +64,35 @@
 > Groq, OpenRouter o Gemini sirven. **El flujo 3 no depende del modelo**: si no está configurado,
 > un extractor por expresiones regulares hace el relevo (ver `specs/03-abonos-distancia.md`).
 
-## 2. Variables de n8n
+## 2. Configuración de los flujos
 
-Se definen en *Settings → Variables* (nivel de instancia) y se leen con `$vars.NOMBRE`.
-Son **valores, no secretos**: se pueden dejar en el repositorio, pero no hace falta.
+La configuración (a quién se avisa, el umbral de la venta grande, los días de aviso) **no está en
+los flujos**: está en [`data/config.csv`](../data/config.csv), un fichero de dos columnas
+(`clave,valor`) que los flujos leen en cada ejecución.
 
-| Variable | Valor por defecto | Para qué | Quién la usa |
+| Clave | Valor por defecto | Para qué | Quién la usa |
 |---|---|---|---|
 | `EMAIL_MARISA` | `marisa@pasofirme.example` | A quién se avisa a la tienda | Todos los flujos |
 | `EMAIL_TIENDA` | `tienda@pasofirme.example` | Remitente de los correos | `sub-notificar` |
 | `UMBRAL_VENTA_GRANDE` | `200` | A partir de qué importe se avisa de una venta | `04 · Aviso de venta grande` |
 | `DIAS_AVISO_VENCIMIENTO` | `7,1` | Cuántos días antes se avisa del vencimiento | `06 · Recordatorios y vencimientos` |
-| `CHAT_ID_MARISA` | (vacío) | Chat de Telegram de Marisa, si se usa ese canal | `sub-notificar` |
-| `IA_MODEL` | `llama-3.3-70b-versatile` | Modelo que extrae los datos del aviso | `03 · Abonos a distancia` |
-| `IA_BASE_URL` | `https://api.groq.com/openai/v1` | URL del proveedor del modelo | `03 · Abonos a distancia` |
 
-> El umbral de la venta grande se cambia **en la variable**, sin tocar el flujo: es el criterio
-> de aceptación de HU-09.
+> **Por qué un fichero y no las variables de n8n.** En la edición comunitaria de n8n, *Settings →
+> Variables* no existe (es una función de pago: `Your license does not allow for
+> feat:variables`) y el acceso a `$env` está bloqueado en las expresiones
+> (`access to env vars denied`). Un fichero montado en el contenedor funciona en cualquier
+> edición, no necesita credenciales y **se cambia sin tocar ningún flujo**: es el criterio de
+> aceptación de HU-09.
+
+Para cambiar algo:
+
+```bash
+# editar data/config.csv y ya está: los flujos leen el fichero en cada ejecución
+notepad data/config.csv
+```
+
+> Ojo con el formato: es un CSV, así que un valor con coma va entre comillas
+> (`DIAS_AVISO_VENCIMIENTO,"7,1"`) y el fichero se guarda **sin BOM**.
 
 ## 3. Variables de entorno (fuera de n8n)
 

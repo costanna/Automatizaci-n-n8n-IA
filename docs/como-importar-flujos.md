@@ -52,7 +52,7 @@ credencial:
 | `Enviar email` | `SMTP - Paso Firme` |
 | `Enviar Telegram` | `Telegram - Paso Firme` |
 | `Correo del banco` | `Banco - IMAP` |
-| `Modelo IA` | `IA - Groq` |
+| `Modelo de lenguaje` | `Modelo - Groq` |
 
 ## 4. Publicar los flujos
 
@@ -142,8 +142,8 @@ existen, que **no hay credenciales escritas dentro** y que no queda ningún marc
 | La app avisa y en n8n no aparece nada | El flujo no está publicado | Botón *Publish* en el despachador |
 | `404` en el webhook | El flujo está en modo *test* | Publicar: la app usa la *Production URL* |
 | `401` en las llamadas a la API | La credencial `Tienda - API` no está enlazada o el `API_KEY` no coincide | Comprobar el `Name` (exactamente `X-API-Key`) y el valor |
-| El flujo 3 no extrae los datos | Falta la credencial `IA - Groq` | No es un error: entra el extractor por regex. Si quieres la IA, crea la credencial |
-| El flujo 3 se para en el nodo de IA | Sin credencial el nodo falla | Está en *On Error → Continue*; el flujo sigue con el extractor de regex |
+| El flujo 3 no extrae los datos | Falta la credencial `Modelo - Groq` | No es un error: entra el extractor por regex. Si quieres el modelo, crea la credencial |
+| El flujo 3 se para en el nodo del modelo | Sin credencial el nodo falla | Está en *On Error → Continue*; el flujo sigue con el extractor por regex |
 | No llegan los correos | SMTP mal configurado | Probar con `scripts/smtp_desarrollo.py` y mirar `data/envios/` |
 | `Access to the file is not allowed` | n8n 2.x restringe la lectura de ficheros | `N8N_RESTRICT_FILE_ACCESS_TO` (ya viene en el `docker-compose.yml`) |
 | Los Flows no se ven en el editor | Se importaron con otro `typeVersion` | En n8n 2.x se actualizan solos; si no, recrear el nodo |

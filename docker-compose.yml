@@ -25,7 +25,7 @@ services:
     volumes:
       - n8n_data:/home/node/.n8n
       - n8n_files:/home/node/.n8n-files
-      # Los CSV de data/ (el Excel de Marisa) se leen desde n8n para la migracion.
+      # Los CSV de data/ (el Excel de Marisa y la configuracion) se leen desde n8n.
       - ./data:/datos:ro
 
 volumes:

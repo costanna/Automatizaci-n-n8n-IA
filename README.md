@@ -41,8 +41,8 @@ cierres de caja, informes y la lectura automática de los avisos del banco.
   `X-API-Key`. **Las reglas del negocio las aplica la app**: n8n no recalcula `pendiente` ni
   `abonado`, los lee.
 
-> **La regla de oro**: *las cifras las calcula la app; n8n las lee y las copia. El modelo de IA
-> redacta el texto, nunca calcula dinero.*
+> **La regla de oro**: *las cifras las calcula la app; n8n las lee y las copia. El modelo redacta el
+> texto, nunca calcula dinero.*
 
 Detalle completo en [`docs/guia-de-la-app.md`](docs/guia-de-la-app.md) y en la
 [ontología del dominio](specs/00-ontologia.md).
@@ -80,7 +80,7 @@ Para parar: `docker compose down`. Para borrar también los datos: `docker compo
 | 00 | `00 · Despachador de eventos` | Webhook `POST /tienda` | Reparte los 4 eventos de la app con un nodo **Switch** | — |
 | 01 | `01 · Confirmación de apartado` | Evento `apartado.creado` | Manda al cliente qué ha apartado, cuánto falta y hasta cuándo | HU-01 |
 | 02 | `02 · Recibo de abono` | Evento `abono.registrado` | Manda el recibo y avisa si el apartado queda liquidado | HU-02 |
-| 03 | `03 · Abonos a distancia` | Correo del banco (IMAP) | Extrae el pago con IA, busca el apartado por API y registra el abono | HU-03 |
+| 03 | `03 · Abonos a distancia` | Correo del banco (IMAP) | Extrae el pago con un modelo de lenguaje, busca el apartado por API y registra el abono | HU-03 |
 | 04 | `04 · Aviso de venta grande` | Evento `venta.registrada` | Avisa a Marisa de las ventas por encima del umbral | HU-09 |
 | 05 | `05 · Cierre diario` | Programado (23:00) | Cierra la caja: ventas, abonos y total por forma de pago | HU-04 |
 | 06 | `06 · Recordatorios y vencimientos` | Programado (08:30) | Recuerda los vencimientos, vence los fuera de plazo y avisa del vale | HU-06, HU-07 |
@@ -180,14 +180,14 @@ git push -u origin feature/flujo-03-abonos-distancia
 │   ├── kanban.md                # Tablero con las historias de usuario
 │   ├── credenciales.md          # Credenciales y variables que necesita cada flujo
 │   ├── como-importar-flujos.md  # Cómo importarlos, configurarlos y probarlos
-│   ├── ai-log.md                # Bitácora de IA: prompts, errores y correcciones
+│   ├── bitacora.md              # Bitácora técnica: decisiones, modelos y fallos corregidos
 │   └── retrospectiva.md         # Retrospectiva del equipo
 ├── workflows/               # Flujos de n8n exportados en JSON (versionados)
 ├── specs/                   # Specs (SDD) de cada automatización + ontología del dominio
 ├── scripts/                 # Utilidades (importar y enlazar, validar, SMTP, pruebas)
 ├── tests/                   # Datos de prueba y resultados esperados de cada flujo
 ├── .github/workflows/        # CI que valida los JSON de los flujos en cada PR
-├── AGENTS.md                # Contexto que se le da al agente de IA
+├── AGENTS.md                # Contexto del proyecto: reglas, convenciones y trampas de n8n
 ├── docker-compose.yml
 └── .env.example
 ```
@@ -217,7 +217,7 @@ configuración, en **Variables**. La lista completa está en
 | [`docs/kanban.md`](docs/kanban.md) | Tablero con las historias de usuario y quién hace cada una |
 | [`docs/credenciales.md`](docs/credenciales.md) | Credenciales y variables que necesita cada flujo |
 | [`docs/como-importar-flujos.md`](docs/como-importar-flujos.md) | Cómo importarlos, configurarlos y probarlos |
-| [`docs/ai-log.md`](docs/ai-log.md) | Bitácora de IA: prompts, errores y correcciones |
+| [`docs/bitacora.md`](docs/bitacora.md) | Bitácora técnica: decisiones, modelos y fallos corregidos |
 | [`docs/retrospectiva.md`](docs/retrospectiva.md) | Retrospectiva del equipo |
-| [`AGENTS.md`](AGENTS.md) | Contexto y reglas para el agente de IA |
+| [`AGENTS.md`](AGENTS.md) | Contexto del proyecto: reglas del negocio y trampas de n8n |
 | [`specs/`](specs/) | Specs de cada automatización y ontología del dominio |

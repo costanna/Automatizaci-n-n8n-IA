@@ -172,7 +172,7 @@ Aviso a Marisa de que algo no se ha podido hacer automáticamente.
 
 | # | Regla |
 |---|---|
-| A1 | Los importes de un mensaje salen **siempre** de la API. El modelo de IA redacta el texto pero no calcula cifras |
+| A1 | Los importes de un mensaje salen **siempre** de la API. El modelo redacta el texto pero no calcula cifras |
 | A2 | Un pago remoto **no se registra** si hay dudas: se pregunta a Marisa |
 | A3 | Un pago remoto **no se registra** si el importe supera el pendiente o el apartado está fuera de plazo: se avisa a Marisa con el motivo |
 | A4 | Un correo que no es un aviso de pago se ignora en silencio (no genera notificación) |

@@ -27,7 +27,7 @@
             {
               "id": "c54cb14f-700e-4f0c-b0a5-db0b28828dca",
               "leftValue": "={{ Number($json.datos?.importe ?? $json.importe ?? 0) }}",
-              "rightValue": "={{ Number($vars.UMBRAL_VENTA_GRANDE || 200) }}",
+              "rightValue": "={{ Number($json.umbral ?? 200) }}",
               "operator": {
                 "type": "number",
                 "operation": "gte"
@@ -50,7 +50,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Aviso a Marisa de una venta grande (HU-09).\n//\n// El umbral NO esta en el flujo: vive en la variable de n8n UMBRAL_VENTA_GRANDE\n// (Settings > Variables). Asi se cambia sin tocar el flujo.\n// El importe es el de la API: no se recalcula.\nconst entrada = $input.first().json ?? {};\nconst d = entrada.datos ?? entrada;\n\nconst euros = (n) => Number(n ?? 0).toFixed(2).replace('.', ',') + ' EUR';\nconst escapar = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst html = (s) => '<p>' + escapar(s).replace(/\\n/g, '<br>') + '</p>';\n\nconst emailTienda = $vars.EMAIL_MARISA || 'marisa@pasofirme.example';\nconst umbral = Number($vars.UMBRAL_VENTA_GRANDE || 200);\n\nconst cuerpo = [\n  'Ojo, esta venta es grande:',\n  '',\n  'Concepto: ' + (d.concepto ?? ''),\n  'Importe: ' + euros(d.importe),\n  'Forma de pago: ' + (d.forma_pago ?? ''),\n  'Fecha: ' + (d.fecha ?? ''),\n  '',\n  'Umbral de aviso: ' + euros(umbral),\n].join('\\n');\n\nreturn [{\n  json: {\n    canal: 'email',\n    email: emailTienda,\n    asunto: 'Venta grande · ' + euros(d.importe),\n    cuerpo,\n    cuerpo_html: html(cuerpo),\n    importe: d.importe ?? null,\n    umbral,\n  },\n}];\n"
+        "jsCode": "// Aviso a Marisa de una venta grande (HU-09).\n//\n// El umbral NO esta en el flujo: vive en la variable de n8n UMBRAL_VENTA_GRANDE\n// (Settings > Variables). Asi se cambia sin tocar el flujo.\n// El importe es el de la API: no se recalcula.\nconst entrada = $input.first().json ?? {};\nconst d = entrada.datos ?? entrada;\n\nconst euros = (n) => Number(n ?? 0).toFixed(2).replace('.', ',') + ' EUR';\nconst escapar = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst html = (s) => '<p>' + escapar(s).replace(/\\n/g, '<br>') + '</p>';\n\n// 'tienda' quiere decir 'la direccion de la tienda', que resuelve el\n// subflujo de notificacion con el fichero de configuracion.\nconst emailTienda = 'tienda';\n// El umbral viene del fichero de configuracion (lo anade el nodo de cruce).\nconst umbral = Number($json.umbral ?? 200);\n\nconst cuerpo = [\n  'Ojo, esta venta es grande:',\n  '',\n  'Concepto: ' + (d.concepto ?? ''),\n  'Importe: ' + euros(d.importe),\n  'Forma de pago: ' + (d.forma_pago ?? ''),\n  'Fecha: ' + (d.fecha ?? ''),\n  '',\n  'Umbral de aviso: ' + euros(umbral),\n].join('\\n');\n\nreturn [{\n  json: {\n    canal: 'email',\n    email: emailTienda,\n    asunto: 'Venta grande · ' + euros(d.importe),\n    cuerpo,\n    cuerpo_html: html(cuerpo),\n    importe: d.importe ?? null,\n    umbral,\n  },\n}];\n"
       },
       "id": "3ab77ec5-ab4b-4a3b-a94f-3a694b8adefa",
       "name": "Preparar aviso",
@@ -81,6 +81,58 @@
         500,
         180
       ]
+    },
+    {
+      "parameters": {
+        "filePath": "/datos/config.csv",
+        "dataPropertyName": "data"
+      },
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "onError": "continueRegularOutput",
+      "notes": "La configuracion vive en data/config.csv: se cambia sin tocar el flujo.",
+      "name": "Leer configuracion",
+      "position": [
+        0,
+        300
+      ],
+      "id": "c0f07862-0000-4000-8000-000000000000"
+    },
+    {
+      "parameters": {
+        "operation": "fromFile",
+        "binaryPropertyName": "data",
+        "fileFormat": "csv",
+        "options": {
+          "delimiter": ",",
+          "headerRow": true,
+          "rawData": true,
+          "includeEmptyCells": true
+        }
+      },
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 2,
+      "onError": "continueRegularOutput",
+      "name": "Parsear configuracion",
+      "position": [
+        220,
+        300
+      ],
+      "id": "c0f01455-0000-4000-8000-000000000000"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Lee la configuracion de data/config.csv (clave,valor).\n// Vive en un fichero y no en el flujo: se cambia sin tocar el flujo.\nconst config = {};\nfor (const item of $('Parsear configuracion').all()) {\n  const clave = String(item.json?.clave ?? '').trim();\n  const valor = String(item.json?.valor ?? '').trim();\n  if (clave) config[clave] = valor;\n}\nconst umbral = Number(config.UMBRAL_VENTA_GRANDE || 200);\n\n// La venta viene del disparador.\nconst ventas = $('Datos de la venta').all().map((i) => i.json);\nreturn ventas.map((v) => ({ json: { ...v, umbral } }));"
+      },
+      "id": "c0f09106-0000-4000-8000-000000000000",
+      "name": "Cruzar con la venta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
     }
   ],
   "connections": {
@@ -88,7 +140,7 @@
       "main": [
         [
           {
-            "node": "¿Venta grande?",
+            "node": "Leer configuracion",
             "type": "main",
             "index": 0
           }
@@ -111,6 +163,39 @@
         [
           {
             "node": "Notificar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer configuracion": {
+      "main": [
+        [
+          {
+            "node": "Parsear configuracion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear configuracion": {
+      "main": [
+        [
+          {
+            "node": "Cruzar con la venta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cruzar con la venta": {
+      "main": [
+        [
+          {
+            "node": "¿Venta grande?",
             "type": "main",
             "index": 0
           }

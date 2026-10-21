@@ -62,7 +62,7 @@ CREDENCIALES = {
     "gmail": "Gmail - Paso Firme",
     "telegramApi": "Telegram - Paso Firme",
     "imap": "Banco - IMAP",
-    "openAiApi": "IA - Groq",
+    "openAiApi": "Modelo - Groq",
     "googleSheets": "Histórico - Sheets",
 }
 
