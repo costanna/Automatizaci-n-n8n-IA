@@ -7,7 +7,7 @@ comprobación. Las historias que llevan etiqueta de nivel **solo** se hacen si s
 
 | Por hacer | En curso | En revisión | Hecho |
 |---|---|---|---|
-| HU-15 · Panel para Marisa 🔴 | | | HU-01 · Confirmación al apartar 🟢 |
+| | | | HU-01 · Confirmación al apartar 🟢 |
 | HU-16 · Funcionar siempre 🔴 | | | HU-02 · Recibo de cada abono 🟢 |
 | | | | HU-03 · Abonos por Bizum o transferencia 🟢 |
 | | | | HU-04 · Cierre de caja automático 🟢 |
@@ -21,6 +21,8 @@ comprobación. Las historias que llevan etiqueta de nivel **solo** se hacen si s
 | | | | HU-12 · Marisa pregunta a su negocio 🟠 |
 | | | | HU-13 · Entrada automática de datos 🟠 |
 | | | | HU-14 · Datos personales protegidos 🟠 |
+| | | | HU-15 · Panel para Marisa 🔴 |
+| | | | HU-16 · Funcionar siempre 🔴 |
 
 ## 📋 Tarjetas
 
@@ -181,14 +183,27 @@ comprobación. Las historias que llevan etiqueta de nivel **solo** se hacen si s
 **Flujos:** `00 · Despachador de eventos` (token), `14 · Asistente de Telegram` (consentimiento y filtrado)
 **Doc:** [`docs/rgpd.md`](rgpd.md)
 
-### 🔴 HU-15 y HU-16 (experto)
+### HU-15 · Panel para Marisa 🔴
 
-Fuera del alcance de esta entrega:
+> Como **Marisa**, quiero ver en una pantalla las ventas, la recaudación, lo pendiente de cobro y los
+> apartados que van a vencer, para decidir sin abrir hojas ni correos.
 
-- **HU-15 · Panel para Marisa**: una pantalla con las ventas, la recaudación, lo pendiente y los
-  apartados por vencer. Las cifras ya están disponibles en la API y en los flujos; falta la vista.
-- **HU-16 · Funcionar siempre**: despliegue en la nube con HTTPS, copias de seguridad automáticas
-  de n8n y CI que valide los JSON (esta última parte ya está: `.github/workflows/validar-flujos.yml`).
+- [x] El panel muestra los datos de la app actualizados (n8n los consulta en cada visita).
+- [x] Se entiende sin explicación y se ve bien en el móvil (diseño responsive, se actualiza solo).
+
+**Flujo:** `15 · Panel de Marisa` · **Spec:** `specs/15-panel-marisa.md`
+**Prueba:** `http://localhost:5678/webhook/panel` (y `?formato=json`)
+
+### HU-16 · Funcionar siempre 🔴
+
+> Como **Marisa**, quiero que las automatizaciones sigan funcionando aunque se reinicie el
+> ordenador, para no depender de que alguien las encienda.
+
+- [x] Despliegue en la nube con HTTPS preparado (`deploy/render.yaml`, `deploy/Dockerfile.n8n` y la guía [`docs/despliegue.md`](despliegue.md)).
+- [x] Copias de seguridad automáticas de los datos de n8n (servicio `backup` del compose, cron en la nube y `scripts/backup_n8n.py`).
+- [x] Un cambio en los flujos pasa por CI (validación de los JSON, importándolos de verdad en n8n) antes de mergear.
+
+**CI:** `.github/workflows/validar-flujos.yml` · **Backups:** `scripts/backup_n8n.py`
 
 ## 👥 Reparto (pareja)
 

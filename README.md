@@ -90,6 +90,7 @@ Para parar: `docker compose down`. Para borrar también los datos: `docker compo
 | 11 | `11 · Apartados desde casa` | Webhook | El cliente pide apartar unos zapatos; la tienda confirma cuando llega el abono | HU-13 |
 | 13 | `13 · Ventas del datáfono` | Programado (02:00) | Importa el CSV de cobros con tarjeta como ventas, sin duplicar | HU-13 |
 | 14 | `14 · Asistente de Telegram` | Telegram | El cliente pregunta cuánto le falta; la tienda pregunta por las cifras | HU-11, HU-12 |
+| 15 | `15 · Panel de Marisa` | Webhook | Una pantalla con las cifras y los apartados que vencen | HU-15 |
 | 90 | `90 · Datos de demo` | Manual | Crea datos de ejemplo por API para la demo | — |
 
 Y tres **subflujos** reutilizables:
@@ -224,5 +225,6 @@ configuración, en **Variables**. La lista completa está en
 | [`docs/como-importar-flujos.md`](docs/como-importar-flujos.md) | Cómo importarlos, configurarlos y probarlos |
 | [`docs/bitacora.md`](docs/bitacora.md) | Bitácora técnica: decisiones, modelos y fallos corregidos |
 | [`docs/retrospectiva.md`](docs/retrospectiva.md) | Retrospectiva del equipo |
+| [`docs/despliegue.md`](docs/despliegue.md) | Despliegue en la nube con HTTPS y copias de seguridad |
 | [`AGENTS.md`](AGENTS.md) | Contexto del proyecto: reglas del negocio y trampas de n8n |
 | [`specs/`](specs/) | Specs de cada automatización y ontología del dominio |
