@@ -66,7 +66,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Un recordatorio por cliente cuyo plazo vence dentro de los dias de aviso.\n//\n// El mensaje lleva lo que falta por pagar y la fecha limite: los datos de la API.\n// Si ese recordatorio ya se envio otro dia, se salta (regla A6).\nconst clasificacion = $('Clasificar apartados').first().json ?? {};\n\n// Los avisos que ya se han enviados se guardan en los datos estaticos del flujo\n// (memoria de n8n entre ejecuciones), para no avisar dos veces al mismo cliente.\nconst staticData = $getWorkflowStaticData('global');\nstaticData.avisos = Array.isArray(staticData.avisos) ? staticData.avisos : [];\nconst enviados = new Set(staticData.avisos.map((k) => String(k)));\n\nconst euros = (n) => Number(n ?? 0).toFixed(2).replace('.', ',') + ' EUR';\nconst escapar = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nconst salida = [];\nconst nuevos = [];\nfor (const r of (clasificacion.recordatorios ?? [])) {\n  if (enviados.has(r.clave)) continue;\n  const a = r.apartado;\n  const cuando = r.dias === 1 ? 'mañana' : 'dentro de ' + r.dias + ' días';\n  const cuerpo = [\n    'Hola ' + (a.cliente ?? '') + ',',\n    '',\n    'Tu apartado de ' + [a.producto, a.talla].filter(Boolean).join(' · ') + ' vence ' + cuando + ' (' + (a.fecha_limite ?? '') + ').',\n    '',\n    'Te queda por pagar: ' + euros(a.pendiente),\n    'Abonado: ' + euros(a.abonado),\n    'Fecha limite: ' + (a.fecha_limite ?? ''),\n    '',\n    'Si no lo terminas antes de la fecha, los zapatos vuelven a la tienda y lo abonado',\n    'se convierte en un vale de compra. Puedes venir cuando quieras a pagar el resto.',\n    '',\n    'Gracias!',\n    'Zapateria Paso Firme',\n  ].join('\\n');\n\n  nuevos.push(r.clave);\n  salida.push({\n    json: {\n      canal: 'email',\n      email: String(a.email ?? '').trim(),\n      asunto: 'Tu apartado vence ' + cuando,\n      cuerpo,\n      cuerpo_html: '<p>' + escapar(cuerpo).replace(/\\n/g, '<br>') + '</p>',\n      clave: r.clave,\n      apartado_id: a.id,\n    },\n  });\n}\n\nreturn salida;\n"
+        "jsCode": "// Un recordatorio por cliente cuyo plazo vence dentro de los dias de aviso.\n//\n// El mensaje lleva lo que falta por pagar y la fecha limite: los datos de la API.\n// Si ese recordatorio ya se envio otro dia, se salta (regla A6).\nconst clasificacion = $('Clasificar apartados').first().json ?? {};\n\n// Los avisos que ya se han enviados se guardan en los datos estaticos del flujo\n// (memoria de n8n entre ejecuciones), para no avisar dos veces al mismo cliente.\nconst staticData = $getWorkflowStaticData('global');\nstaticData.avisos = Array.isArray(staticData.avisos) ? staticData.avisos : [];\nconst enviados = new Set(staticData.avisos.map((k) => String(k)));\n\nconst euros = (n) => Number(n ?? 0).toFixed(2).replace('.', ',') + ' EUR';\nconst escapar = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nconst salida = [];\nconst nuevos = [];\nfor (const r of (clasificacion.recordatorios ?? [])) {\n  if (enviados.has(r.clave)) continue;\n  const a = r.apartado;\n  const cuando = r.dias === 1 ? 'mañana' : 'dentro de ' + r.dias + ' días';\n  const cuerpo = [\n    'Hola ' + (a.cliente ?? '') + ',',\n    '',\n    'Tu apartado de ' + [a.producto, a.talla].filter(Boolean).join(' · ') + ' vence ' + cuando + ' (' + (a.fecha_limite ?? '') + ').',\n    '',\n    'Te queda por pagar: ' + euros(a.pendiente),\n    'Abonado: ' + euros(a.abonado),\n    'Fecha limite: ' + (a.fecha_limite ?? ''),\n    '',\n    'Si no lo terminas antes de la fecha, los zapatos vuelven a la tienda y lo abonado',\n    'se convierte en un vale de compra. Puedes venir cuando quieras a pagar el resto.',\n    '',\n    'Gracias!',\n    'Zapateria Paso Firme',\n  ].join('\\n');\n\n  nuevos.push(r.clave);\n  salida.push({\n    json: {\n      canal: 'email',\n      email: String(a.email ?? '').trim(),\n      asunto: 'Tu apartado vence ' + cuando,\n      cuerpo,\n      cuerpo_html: '<p>' + escapar(cuerpo).replace(/\\n/g, '<br>') + '</p>',\n      // Cifras que la redaccion tiene que mantener: se comprueban despues.\n      cifras: [euros(a.pendiente)],\n      clave: r.clave,\n      apartado_id: a.id,\n    },\n  });\n}\n\nreturn salida;\n"
       },
       "id": "fe403304-f373-40d3-b782-bf0c2af377cd",
       "name": "Preparar recordatorios",
@@ -227,6 +227,61 @@
         300
       ],
       "id": "c0f01455-0000-4000-8000-000000000000"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Reescribe este aviso de una zapateria con un tono mas cercano y calido, en español, de 4 o 5 lineas.\n\nREGLAS:\n- NO cambies, traduzcas ni redondees ninguna cantidad: copia los importes exactamente como estan.\n- NO anadas datos que no estan en el aviso.\n- NO uses emojis ni signos de exclamacion.\n- Devuelve solo el texto del aviso.\n\nAVISO ORIGINAL:\n{{ $json.cuerpo }}",
+        "hasOutputParser": false
+      },
+      "id": "f0600010-0000-4000-8000-000000000010",
+      "name": "Redactar con IA",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        800,
+        40
+      ],
+      "onError": "continueRegularOutput",
+      "notes": "El modelo solo cambia el tono: las cifras las comprueba el nodo siguiente."
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {
+          "model": "llama-3.3-70b-versatile",
+          "baseURL": "https://api.groq.com/openai/v1",
+          "temperature": 0.7
+        }
+      },
+      "id": "f0600011-0000-4000-8000-000000000011",
+      "name": "Modelo de lenguaje",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        800,
+        -120
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "AObcnrHYApyAABAH",
+          "name": "Modelo - Groq"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Comprueba que la redaccion del modelo mantiene todas las cifras del aviso.\n//\n// Si el modelo ha cambiado, redondeado o inventado un importe, se usa el texto\n// original: el tono lo pone el modelo, las cifras las pone la tienda.\nconst entrada = $input.first().json ?? {};\nconst original = String(entrada.cuerpo ?? '');\nconst cifras = entrada.cifras ?? [];\n\nconst redactado = String(entrada.text ?? entrada.output ?? '').trim();\nconst normalizar = (t) => String(t).replace(/\\s/g, '').replace(',', '.');\n\nconst faltan = cifras.filter((c) => !normalizar(redactado).includes(normalizar(c)));\n\nconst cuerpo = redactado && faltan.length === 0 ? redactado : original;\n\nreturn [{\n  json: {\n    ...entrada,\n    cuerpo,\n    cuerpo_html: '<p>' + String(cuerpo).replace(/&/g, '&amp;').replace(/</g, '&lt;')\n      .replace(/>/g, '&gt;').replace(/\\n/g, '<br>') + '</p>',\n    redaccion: redactado && faltan.length === 0 ? 'aceptada' : 'original',\n    cifras_faltantes: faltan,\n  },\n}];"
+      },
+      "id": "f0600012-0000-4000-8000-000000000012",
+      "name": "Comprobar las cifras",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        40
+      ]
     }
   ],
   "connections": {
@@ -272,7 +327,7 @@
       "main": [
         [
           {
-            "node": "Enviar recordatorios",
+            "node": "Redactar con IA",
             "type": "main",
             "index": 0
           }
@@ -345,6 +400,39 @@
           {
             "node": "Clasificar apartados",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redactar con IA": {
+      "main": [
+        [
+          {
+            "node": "Comprobar las cifras",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comprobar las cifras": {
+      "main": [
+        [
+          {
+            "node": "Enviar recordatorios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modelo de lenguaje": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Redactar con IA",
+            "type": "ai_languageModel",
             "index": 0
           }
         ]
