@@ -22,13 +22,63 @@ services:
       # n8n 2.x solo deja leer ficheros de estas carpetas (separadas por ';'):
       # /datos (los CSV de data/) y ~/.n8n-files (historicos que escriben los flujos).
       - N8N_RESTRICT_FILE_ACCESS_TO=/datos;/home/node/.n8n-files
+      # Con DB_TYPE=postgresdb n8n guarda los datos en Postgres en vez de SQLite.
+      # (El servicio 'postgres' de abajo hay que levantarlo con el perfil 'postgres'.)
+      - DB_TYPE=${DB_TYPE:-sqlite}
+      - DB_POSTGRESDB_HOST=${DB_POSTGRESDB_HOST:-postgres}
+      - DB_POSTGRESDB_PORT=${DB_POSTGRESDB_PORT:-5432}
+      - DB_POSTGRESDB_DATABASE=${DB_POSTGRESDB_DATABASE:-n8n}
+      - DB_POSTGRESDB_USER=${DB_POSTGRESDB_USER:-n8n}
+      - DB_POSTGRESDB_PASSWORD=${DB_POSTGRESDB_PASSWORD:-n8n}
+      # En la nube, la URL publica con la que se llega a n8n (para los webhooks y HTTPS).
+      - WEBHOOK_URL=${WEBHOOK_URL:-}
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - N8N_EDITOR_BASE_URL=${WEBHOOK_URL:-}
     volumes:
       - n8n_data:/home/node/.n8n
       - n8n_files:/home/node/.n8n-files
       # Los CSV de data/ (el Excel de Marisa y la configuracion) se leen desde n8n.
       - ./data:/datos:ro
+    depends_on:
+      - backup
+
+  # Copias de seguridad automaticas: cada 24 horas,scripts/backup_n8n.py
+  # guarda la base de datos de n8n, la clave de cifrado y los flujos.
+  backup:
+    image: python:3.12-slim
+    working_dir: /app
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - n8n_data:/datos:ro
+      - ./backups:/backups
+      - ./workflows:/flujos:ro
+    command: >
+      sh -c "while true; do
+        python /app/scripts/backup_n8n.py --datos /datos --destino /backups --conservar 14 || true;
+        sleep 86400;
+      done"
+    restart: unless-stopped
+
+  # Postgres para n8n (opcional): docker compose --profile postgres up -d
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["postgres"]
+    environment:
+      - POSTGRES_DB=${DB_POSTGRESDB_DATABASE:-n8n}
+      - POSTGRES_USER=${DB_POSTGRESDB_USER:-n8n}
+      - POSTGRES_PASSWORD=${DB_POSTGRESDB_PASSWORD:-n8n}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_POSTGRESDB_USER:-n8n}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   tienda_data:
   n8n_data:
   n8n_files:
+  postgres_data:
