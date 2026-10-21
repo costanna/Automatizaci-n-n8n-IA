@@ -87,6 +87,9 @@ Para parar: `docker compose down`. Para borrar también los datos: `docker compo
 | 07 | `07 · Informe mensual` | Programado (día 1, 09:00) | Recaudación del mes, pendiente de cobro y apartados del mes | HU-08 |
 | 08 | `08 · Avisos de error` | Error Trigger | Avisa del flujo, el paso y el error (sin claves) | HU-05 |
 | 10 | `10 · Migración del Excel` | Manual | Migra el Excel antiguo, limpia los datos e informa de los dudosos | HU-10 |
+| 11 | `11 · Apartados desde casa` | Webhook | El cliente pide apartar unos zapatos; la tienda confirma cuando llega el abono | HU-13 |
+| 13 | `13 · Ventas del datáfono` | Programado (02:00) | Importa el CSV de cobros con tarjeta como ventas, sin duplicar | HU-13 |
+| 14 | `14 · Asistente de Telegram` | Telegram | El cliente pregunta cuánto le falta; la tienda pregunta por las cifras | HU-11, HU-12 |
 | 90 | `90 · Datos de demo` | Manual | Crea datos de ejemplo por API para la demo | — |
 
 Y tres **subflujos** reutilizables:
@@ -96,6 +99,8 @@ Y tres **subflujos** reutilizables:
 | `SUB · Notificar` | Envía el mensaje por el canal que le pidan (correo o Telegram) y dice si ha salido |
 | `SUB · Buscar apartado` | Busca a qué apartado pertenece un pago remoto |
 | `SUB · Avisar vale` | Avisa al cliente del vale y a la tienda de los zapatos que vuelven a la venta |
+| `SUB · Tool saldo del cliente` | La herramienta del bot: los apartados de un cliente, por teléfono |
+| `SUB · Tool cifras de la tienda` | La herramienta del bot: la recaudación y lo pendiente de cobro |
 
 Las specs de cada uno (qué hace, casos de error y criterios de aceptación) están en
 [`specs/`](specs/).

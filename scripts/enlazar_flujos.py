@@ -53,6 +53,8 @@ DESTINOS = {
     "PENDIENTE_ID_SUB_NOTIFICAR": "SUB · Notificar",
     "PENDIENTE_ID_SUB_BUSCAR_APARTADO": "SUB · Buscar apartado",
     "PENDIENTE_ID_SUB_AVISAR_VALE": "SUB · Avisar vale",
+    "PENDIENTE_ID_SUB_TOOL_SALDO": "SUB · Tool saldo del cliente",
+    "PENDIENTE_ID_SUB_TOOL_CIFRAS": "SUB · Tool cifras de la tienda",
 }
 
 # Credenciales que usan los flujos -> nombre que deben tener en n8n.

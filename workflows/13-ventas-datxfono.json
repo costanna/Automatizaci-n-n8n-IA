@@ -1,0 +1,335 @@
+{
+  "name": "13 · Ventas del datáfono",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "b1000001-0000-4000-8000-000000000001",
+      "name": "Cada noche a las 02:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -620,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Rango de busqueda: los ultimos 30 dias, para que cubra el CSV que deja el\n// datafono (no solo el dia anterior).\nconst hoy = new Intl.DateTimeFormat('en-CA', {\n  timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',\n}).format(new Date());\nconst desde = new Date(hoy + 'T00:00:00Z');\ndesde.setUTCDate(desde.getUTCDate() - 30);\n\nreturn [{ json: { hoy, desde: desde.toISOString().slice(0, 10) } }];"
+      },
+      "id": "b1000002-0000-4000-8000-000000000002",
+      "name": "Fecha de la importacion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=http://tienda:8000/api/ventas?desde={{ $json.desde }}&hasta={{ $json.hoy }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "b1000003-0000-4000-8000-000000000003",
+      "name": "Ventas que ya tiene la tienda",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -200,
+        180
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WsD8qReuVdb5h8sd",
+          "name": "Tienda - API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Devuelve UN solo item: el nodo que lee el CSV hace una sola lectura.\nreturn [{ json: { ok: true } }];\n"
+      },
+      "id": "b1000004-0000-4000-8000-000000000004",
+      "name": "Preparar la lectura",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        20,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "filePath": "/datos/datxfono.csv",
+        "dataPropertyName": "data"
+      },
+      "id": "b1000005-0000-4000-8000-000000000005",
+      "name": "Leer el CSV del datáfono",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        240,
+        180
+      ],
+      "onError": "continueRegularOutput",
+      "notes": "El CSV del datáfono con los cobros con tarjeta (data/datxfono.csv)."
+    },
+    {
+      "parameters": {
+        "operation": "fromFile",
+        "binaryPropertyName": "data",
+        "fileFormat": "csv",
+        "options": {
+          "delimiter": ",",
+          "headerRow": true,
+          "rawData": true,
+          "includeEmptyCells": true
+        }
+      },
+      "id": "b1000006-0000-4000-8000-000000000006",
+      "name": "Parsear el CSV",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 2,
+      "position": [
+        460,
+        180
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Prepara las ventas del datafono, quitando las que ya estan.\n//\n// La clave de cada cobro es fecha|hora|importe|ultimos4 de la tarjeta: con eso no se\n// importa dos veces el mismo cobro, aunque el flujo se ejecute varias veces.\n//\n// Ademas se descartan los cobros que ya estan en la tienda (mismo dia, mismo importe\n// y mismo concepto), por si el CSV se ha volcado de nuevo.\nconst entrada = $input.first().json ?? {};\n\nconst digitos = (s) => String(s ?? '').replace(/[^0-9]/g, '');\nconst aNumero = (bruto) => {\n  if (bruto === null || bruto === undefined) return null;\n  if (typeof bruto === 'number') return Number.isFinite(bruto) ? bruto : null;\n  let s = String(bruto).trim().replace(/[^0-9.,]/g, '');\n  if (!s) return null;\n  const coma = s.lastIndexOf(',');\n  const punto = s.lastIndexOf('.');\n  if (coma >= 0 && punto >= 0) {\n    s = coma > punto ? s.replace(/\\./g, '').replace(',', '.') : s.replace(/,/g, '');\n  } else if (coma >= 0) {\n    s = s.replace(',', '.');\n  }\n  const n = Number(s);\n  return Number.isFinite(n) ? n : null;\n};\n\nconst filas = $('Parsear el CSV').all().map((i) => i.json ?? {});\n\nconst staticData = $getWorkflowStaticData('global');\nstaticData.cobros = Array.isArray(staticData.cobros) ? staticData.cobros : [];\nconst yaImportados = new Set(staticData.cobros.map(String));\n\nconst enTienda = $('Ventas que ya tiene la tienda').all()\n  .flatMap((i) => (Array.isArray(i.json) ? i.json : [i.json]))\n  .filter((v) => v && v.id !== undefined)\n  .map((v) => [String(v.fecha ?? ''), Number(v.importe ?? 0).toFixed(2), String(v.concepto ?? '').trim().toLowerCase()].join('|'));\n\nconst ventas = [];\nconst omitidas = [];\n\nfor (const fila of filas) {\n  const fecha = String(fila.fecha ?? '').trim();\n  const hora = String(fila.hora ?? '').trim();\n  const importe = aNumero(fila.importe);\n  const tarjeta = digitos(fila.tarjeta);\n  const concepto = String(fila.concepto ?? '').trim() || 'Cobro con tarjeta';\n\n  if (!fecha || importe === null || importe <= 0) {\n    omitidas.push({ fecha, hora, importe: fila.importe, motivo: 'fila ilegible' });\n    continue;\n  }\n\n  const clave = [fecha, hora, importe.toFixed(2), tarjeta.slice(-4)].join('|');\n  if (yaImportados.has(clave)) {\n    omitidas.push({ fecha, hora, importe, motivo: 'ya importado' });\n    continue;\n  }\n  if (enTienda.includes([fecha, importe.toFixed(2), concepto.toLowerCase()].join('|'))) {\n    omitidas.push({ fecha, hora, importe, motivo: 'ya esta en la tienda' });\n    continue;\n  }\n\n  yaImportados.add(clave);\n  ventas.push({ clave, fecha, importe, concepto, forma_pago: 'tarjeta' });\n}\n\n// Un item por venta: el nodo HTTP hace una peticion por item.\nreturn ventas.map((v) => ({ json: { ...entrada, ...v, omitidas, total: ventas.length } }));"
+      },
+      "id": "b1000007-0000-4000-8000-000000000007",
+      "name": "Preparar las ventas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://tienda:8000/api/ventas",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ concepto: $json.concepto, importe: $json.importe, forma_pago: 'tarjeta', fecha: $json.fecha }) }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "b1000008-0000-4000-8000-000000000008",
+      "name": "Registrar las ventas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        940,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WsD8qReuVdb5h8sd",
+          "name": "Tienda - API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Guarda los cobros importados y resume lo que ha pasado.\n//\n// La clave de cada cobro (fecha|hora|importe|ultimos4) queda en los datos estaticos\n// del flujo: si se ejecuta otra vez, esos cobros no se vuelven a registrar.\nconst venta = $input.first().json ?? {};\nconst preparacion = $('Preparar las ventas').first().json ?? {};\n\nconst staticData = $getWorkflowStaticData('global');\nstaticData.cobros = Array.isArray(staticData.cobros) ? staticData.cobros : [];\n\nconst errores = [];\nconst registradas = [];\n\n// El nodo HTTP devuelve un item por venta, en el mismo orden que las preparadas:\n// se usan los indices para saber que clave de cobro corresponde a cada una.\nconst entradas = $input.all();\nentradas.forEach((item, indice) => {\n  const v = item.json ?? {};\n  const origen = (preparacion.ventas ?? [])[indice];\n  if (v.id !== undefined && v.concepto !== undefined) {\n    registradas.push(v);\n    if (origen?.clave) staticData.cobros.push(origen.clave);\n  } else {\n    errores.push(v);\n  }\n});\n\n// Solo se guardan los ultimos 2000 cobros: el historico no crece sin limite.\nstaticData.cobros = Array.from(new Set(staticData.cobros)).slice(-2000);\n\nconst euros = (n) => Number(n ?? 0).toFixed(2).replace('.', ',') + ' EUR';\nconst total = registradas.reduce((s, v) => s + Number(v.importe ?? 0), 0);\n\nconst cuerpo = [\n  'Importacion del datáfono:',\n  '',\n  'Cobros importados: ' + registradas.length,\n  'Cobros omitidos (ya estaban): ' + ((preparacion.omitidas ?? []).length),\n  'Total importado: ' + euros(total),\n].concat(errores.length ? ['', 'Errores: ' + errores.length] : []).join('\\n');\n\nreturn [{ json: { ...venta, registradas, errores, omitidas: preparacion.omitidas ?? [], total: Number(total.toFixed(2)), cuerpo } }];"
+      },
+      "id": "b1000009-0000-4000-8000-000000000009",
+      "name": "Guardar y resumir la importacion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "qiU7wQ7zQlr3HNNp",
+          "mode": "list",
+          "cachedResultName": "SUB · Notificar"
+        },
+        "mode": "once",
+        "options": {}
+      },
+      "id": "b100000a-0000-4000-8000-00000000000a",
+      "name": "Avisar a la tienda",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        1420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "datxfono",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "b1000010-0000-4000-8000-000000000010",
+      "name": "Importar a mano",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -620,
+        480
+      ],
+      "webhookId": "b1000011-0000-4000-8000-000000000011",
+      "notes": "Permite lanzar la importacion a mano (por ejemplo, despues de volcar el CSV)."
+    }
+  ],
+  "connections": {
+    "Cada noche a las 02:00": {
+      "main": [
+        [
+          {
+            "node": "Fecha de la importacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fecha de la importacion": {
+      "main": [
+        [
+          {
+            "node": "Ventas que ya tiene la tienda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ventas que ya tiene la tienda": {
+      "main": [
+        [
+          {
+            "node": "Preparar la lectura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar la lectura": {
+      "main": [
+        [
+          {
+            "node": "Leer el CSV del datáfono",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer el CSV del datáfono": {
+      "main": [
+        [
+          {
+            "node": "Parsear el CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear el CSV": {
+      "main": [
+        [
+          {
+            "node": "Preparar las ventas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar las ventas": {
+      "main": [
+        [
+          {
+            "node": "Registrar las ventas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar las ventas": {
+      "main": [
+        [
+          {
+            "node": "Guardar y resumir la importacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar y resumir la importacion": {
+      "main": [
+        [
+          {
+            "node": "Avisar a la tienda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Importar a mano": {
+      "main": [
+        [
+          {
+            "node": "Fecha de la importacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}

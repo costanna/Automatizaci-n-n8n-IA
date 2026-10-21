@@ -4,7 +4,38 @@ Todas las novedades del proyecto. El formato sigue
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el versionado es
 [SemVer](https://semver.org/lang/es/).
 
+## [1.2.0] - 2026-10-21
+
+### Añadido
+
+- `14 · Asistente de Telegram` (HU-11 y HU-12): un bot al que el cliente pregunta cuánto le
+  falta por pagar y la tienda pregunta por la recaudación y los vencimientos. El bot apunta
+  cada chat a un teléfono y **solo enseña los apartados de ese teléfono**.
+- `SUB · Tool saldo del cliente` y `SUB · Tool cifras de la tienda`: las dos herramientas que
+  usa el bot, que van a la API de la tienda.
+- `11 · Apartados desde casa` (HU-13): un formulario web para pedir un apartado desde casa. La
+  tienda recibe la solicitud con un código y el apartado se confirma cuando llega el abono inicial.
+- `13 · Ventas del datáfono` (HU-13): cada noche se importa el CSV de los cobros con tarjeta
+  como ventas, sin duplicar los cobros ya importados.
+- `docs/rgpd.md`: qué datos se guardan, qué sale de nuestra máquina y con qué criterio se avisa
+  a alguien (HU-14).
+- `.opencode/command/`: dos comandos de OpenCode para las tareas repetitivas
+  (`/generar-spec` y `/revisar-flujo`).
+
+### Corregido
+
+- **El webhook de la tienda va protegido** (HU-14): sin el token correcto responde `401` y no
+  ejecuta nada. El token va en `data/config.csv` (`WEBHOOK_TOKEN`) y en la URL del webhook del
+  `.env` de la tienda.
+- Los recordatorios los redacta ahora el modelo con un tono más cercano, y un nodo comprueba
+  que **no ha cambiado ninguna cifra**: si las ha cambiado, se usa el texto original.
+- La búsqueda de apartados por teléfono se hace por dígitos (la búsqueda `q` de la app es un
+  `LIKE` y no encontraba `600000001` dentro de `600 000 001`).
+- El importador del datáfono registra **una venta por cobro** (antes registraba solo el
+  primero) y no importa dos veces el mismo cobro.
+
 ## [1.1.0] - 2026-10-21
+
 
 ### Añadido
 

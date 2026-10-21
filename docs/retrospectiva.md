@@ -83,24 +83,51 @@ el cierre de caja y el informe mensual dejo de depender de que alguien se acuerd
 
 | Flujo | Estado | Pruebas |
 |---|---|---|
-| 00 · Despachador de eventos | ✅ | Recibe los 4 eventos y reparte |
+| 00 · Despachador de eventos | ✅ | Recibe los 4 eventos, reparte y **rechaza sin token** (401) |
 | 01 · Confirmación de apartado | ✅ | 3 comprobaciones OK |
 | 02 · Recibo de abono | ✅ | 3 comprobaciones OK |
 | 03 · Abonos a distancia | ✅ | 13 comprobaciones OK (los 9 correos) |
-| 04 · Aviso de venta grande | ✅ | 2 comprobaciones OK |
+| 04 · Aviso de venta grande | ✅ | 2 comprobaciones OK, con el umbral configurable |
 | 05 · Cierre diario | ✅ | Cierre con desglose por forma de pago |
-| 06 · Recordatorios y vencimientos | ✅ | Recordatorios (7 y 1 día), vencimientos y vales |
+| 06 · Recordatorios y vencimientos | ✅ | Recordatorios (7 y 1 día), vencimientos, vales y redacción con IA |
 | 07 · Informe mensual | ✅ | Recaudación, pendiente y apartados del mes |
 | 08 · Avisos de error | ✅ | Avisa con flujo, paso y error, y limpia las claves |
 | 10 · Migración del Excel | ✅ | 7 apartados migrados, 2 dudosos y no duplica al repetir |
+| 11 · Apartados desde casa | ✅ | 7 comprobaciones OK (solicitud, aviso y confirmación) |
+| 13 · Ventas del datáfono | ✅ | 3 comprobaciones OK (importa y no duplica) |
+| 14 · Asistente de Telegram | ✅ | Cliente pide el teléfono y recibe su saldo; la tienda recibe las cifras |
 | 90 · Datos de demo | ✅ | Crea datos de ejemplo por API |
+
+**Nivel entregado: 🟢 Esencial + 🟡 Medio + 🟠 Avanzado** (14 historias de usuario). Las
+comprobaciones automáticas son 40 (24 de los flujos de siempre + 7 del flujo 11 + 3 del 13 + 6 del
+asistente, que se prueban con un webhook que simula el mensaje de Telegram).
+
+## Lo que aprendimos en el nivel avanzado
+
+- **Proteger el webhook obliga a tocar la app, y la app es de la plataforma.** La solución ha
+  sido poner el token en la URL (`?token=...`), que es lo único que la app puede cambiar sin
+  tocar su código. El token se compara en el primer nodo del despachador y, si no coincide, se
+  responde 401 sin ejecutar nada.
+- **Un bot que "reconoce" a un cliente sin guardar datos personales nuevos**: el chat se apunta a
+  un teléfono la primera vez y a partir de ahí solo se le enseñan los apartados de ese teléfono,
+  comparando los dígitos. Dos clientes parecidos no se ven entre sí.
+- **Que el modelo redacte, pero no decida, se puede comprobar.** En los dos sitios donde entra un
+  modelo (el bot y los recordatorios) hay un nodo que compara las cifras de su respuesta con
+  las que salieron de la API y, si no coinciden, usa el texto original. Así el tono es del modelo
+  y las cifras son de la tienda.
+- **El nodo de formulario de n8n 2.6 dio más guerra que el bot entero**: al final se sustituyó
+  por dos webhooks (uno que sirve el formulario y otro que lo recibe), que además se pueden
+  probar con un `curl`.
+- **La configuración fuera de n8n era la única opción**: en la edición comunitaria no hay
+  variables y `$env` está bloqueado. Un `config.csv` montado en el contenedor lo resuelve y no
+  necesita licencia ni credenciales.
 
 ## Lo que queda fuera
 
-- 🟠 El asistente de Telegram (HU-11 y HU-12): la arquitectura ya está preparada
-  (`SUB · Notificar` acepta los dos canales), pero falta el nodo de modelo de lenguaje.
-- 🟠 La entrada automática de datos (HU-13).
-- 🟠 El panel para Marisa (HU-15) y el despliegue con HTTPS y CI (HU-16).
+- 🔴 El panel para Marisa (HU-15) y el despliegue en la nube con HTTPS, copias de seguridad
+  automáticas de n8n y CI completa (HU-16). La CI de validación de JSON sí está.
 - La API de la tienda no expone un histórico de estados: el informe mensual aproxima los
   apartados liquidados del mes con los abonos que tienen. Si algún día hace falta exacto, la
   app tendría que exponer esa información.
+- La app no tiene campo de consentimiento: el criterio es "solo se escribe a quien ha dejado
+  una dirección de correo" (ver [`docs/rgpd.md`](rgpd.md)).

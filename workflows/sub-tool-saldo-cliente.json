@@ -1,0 +1,90 @@
+{
+  "name": "SUB · Tool saldo del cliente",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "e1000001-0000-4000-8000-000000000001",
+      "name": "Datos de la consulta",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://tienda:8000/api/apartados?estado=activo",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "e1000002-0000-4000-8000-000000000002",
+      "name": "Buscar apartados del cliente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        0,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WsD8qReuVdb5h8sd",
+          "name": "Tienda - API"
+        }
+      },
+      "notes": "Se piden todos los apartados activos y se filtran por telefono en el nodo siguiente: la busqueda 'q' de la app no encuentra '600000001' dentro de '600 000 001'."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Devuelve los apartados de UN cliente, filtrados por su telefono.\n//\n// El filtro es exacto (comparando solo los digitos del telefono): asi el bot\n// nunca enseña los apartados de otra persona, aunque dos clientes se parezcan.\nconst consulta = $('Datos de la consulta').first().json ?? {};\nconst telefonoPedido = String(consulta.telefono ?? '').replace(/[^0-9]/g, '');\n\nconst digitos = (s) => String(s ?? '').replace(/[^0-9]/g, '');\nconst euros = (n) => Number(n ?? 0).toFixed(2).replace('.', ',') + ' EUR';\n\nconst candidatos = $input.all()\n  .flatMap((i) => (Array.isArray(i.json) ? i.json : [i.json]))\n  .filter((a) => a && a.id !== undefined);\n\nconst apartados = telefonoPedido\n  ? candidatos.filter((a) => digitos(a.telefono) === telefonoPedido)\n  : [];\n\nconst total = apartados.reduce((s, a) => s + Number(a.pendiente ?? 0), 0);\n\nreturn [{\n  json: {\n    telefono: telefonoPedido,\n    encontrado: apartados.length > 0,\n    apartados: apartados.map((a) => ({\n      id: a.id,\n      producto: a.producto,\n      talla: a.talla,\n      precio: a.precio,\n      abonado: a.abonado,\n      pendiente: a.pendiente,\n      fecha_limite: a.fecha_limite,\n      estado: a.estado,\n    })),\n    total_pendiente: Number(total.toFixed(2)),\n    total_pendiente_texto: euros(total),\n  },\n}];\n"
+      },
+      "id": "e1000003-0000-4000-8000-000000000003",
+      "name": "Filtrar por telefono",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Datos de la consulta": {
+      "main": [
+        [
+          {
+            "node": "Buscar apartados del cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar apartados del cliente": {
+      "main": [
+        [
+          {
+            "node": "Filtrar por telefono",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}
