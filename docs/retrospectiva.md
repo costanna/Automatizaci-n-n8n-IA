@@ -98,9 +98,9 @@ el cierre de caja y el informe mensual dejo de depender de que alguien se acuerd
 | 14 · Asistente de Telegram | ✅ | Cliente pide el teléfono y recibe su saldo; la tienda recibe las cifras |
 | 90 · Datos de demo | ✅ | Crea datos de ejemplo por API |
 
-**Nivel entregado: 🟢 Esencial + 🟡 Medio + 🟠 Avanzado** (14 historias de usuario). Las
-comprobaciones automáticas son 40 (24 de los flujos de siempre + 7 del flujo 11 + 3 del 13 + 6 del
-asistente, que se prueban con un webhook que simula el mensaje de Telegram).
+**Nivel entregado: todos los niveles** (16 historias de usuario). Las comprobaciones
+automáticas son 40 (24 de los flujos de siempre + 7 del flujo 11 + 3 del 13 + 6 del asistente, que
+se prueban con un webhook que simula el mensaje de Telegram).
 
 ## Lo que aprendimos en el nivel avanzado
 
@@ -122,12 +122,26 @@ asistente, que se prueban con un webhook que simula el mensaje de Telegram).
   variables y `$env` está bloqueado. Un `config.csv` montado en el contenedor lo resuelve y no
   necesita licencia ni credenciales.
 
+## El nivel experto
+
+- **El panel (HU-15)** salió mejor de lo esperado: como n8n ya sabe hablar con la API, lo más
+  simple es que **el propio n8n sirva la página**. No hay que desplegar nada más ni enseñar la
+  clave de la API: el navegador recibe los datos ya consultados. La versión JSON del mismo panel
+  (`?formato=json`) sirve para otras herramientas.
+- **Lo de "funcionar siempre" (HU-16)** es, sobre todo, trabajo de operaciones: la CI ya
+  importaba los flujos en n8n de verdad (no solo validaba el JSON), el compose tiene un servicio
+  que hace la copia cada 24 horas y hay un blueprint de Render con HTTPS, Postgres y el cron de
+  las copias. **No se ha hecho el despliegue real** (hace falta una cuenta y una tarjeta), así
+  que la guía está escrita paso a paso pero sin estrenar.
+- **El MCP Server Trigger** (exponer los flujos como servidor MCP para que otros agentes
+  consulten la tienda) **no se ha podido hacer**: el nodo no existe en la versión de n8n que
+  tenemos instalada. Está anotado en la guía de despliegue.
+
 ## Lo que queda fuera
 
-- 🔴 El panel para Marisa (HU-15) y el despliegue en la nube con HTTPS, copias de seguridad
-  automáticas de n8n y CI completa (HU-16). La CI de validación de JSON sí está.
 - La API de la tienda no expone un histórico de estados: el informe mensual aproxima los
   apartados liquidados del mes con los abonos que tienen. Si algún día hace falta exacto, la
   app tendría que exponer esa información.
+- El despliegue en la nube está preparado pero sin estrenar (hace falta una cuenta).
 - La app no tiene campo de consentimiento: el criterio es "solo se escribe a quien ha dejado
   una dirección de correo" (ver [`docs/rgpd.md`](rgpd.md)).

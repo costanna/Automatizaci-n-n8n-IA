@@ -23,7 +23,6 @@ jobs:
       - name: Comprobar que las specs y los flujos van juntos
         run: |
           python - <<'PY'
-          import json
           import pathlib
           import sys
 
@@ -45,3 +44,87 @@ jobs:
             exit 1
           fi
           echo "Sin claves en el repositorio."
+
+  importar:
+    name: Los flujos se importan de verdad en n8n
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Levantar n8n
+        run: |
+          docker run -d --name n8n_prueba \
+            -e N8N_ENCRYPTION_KEY=clave-de-prueba-para-la-ci \
+            -e GENERIC_TIMEZONE=Europe/Madrid \
+            -e TZ=Europe/Madrid \
+            -p 5678:5678 \
+            docker.n8n.io/n8nio/n8n
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:5678/healthz > /dev/null; then
+              echo "n8n listo"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "n8n no ha arrancado"
+          docker logs n8n_prueba
+          exit 1
+
+      - name: Importar los flujos
+        run: |
+          docker cp workflows/. n8n_prueba:/tmp/workflows
+          docker exec n8n_prueba n8n import:workflow --separate --input=/tmp/workflows
+
+      - name: Comprobar que se han importado todos
+        run: |
+          total=$(ls workflows/*.json | wc -l)
+          importados=$(docker exec n8n_prueba sh -c "ls /home/node/.n8n/database.sqlite > /dev/null && echo ok")
+          echo "Ficheros de flujo: $total"
+          # La importacion falla con codigo distinto de 0 si algun flujo no entra.
+          docker exec n8n_prueba sh -c "n8n import:workflow --separate --input=/tmp/workflows 2>&1 | tail -3"
+
+      - name: Parar n8n
+        if: always()
+        run: docker rm -f n8n_prueba || true
+
+  copia:
+    name: La copia de seguridad funciona
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Probar el script de copia (sin base de datos real)
+        run: |
+          python - <<'PY'
+          import sqlite3
+          import pathlib
+          import subprocess
+          import sys
+          import tempfile
+
+          raiz = pathlib.Path(".")
+          temporal = pathlib.Path(tempfile.mkdtemp())
+          (temporal / "config").write_text('{"encryptionKey":"clave"}', encoding="utf-8")
+          db = sqlite3.connect(temporal / "database.sqlite")
+          db.execute("create table prueba (id integer)")
+          db.execute("insert into prueba values (1)")
+          db.commit()
+          db.close()
+
+          salida = subprocess.run(
+              [sys.executable, str(raiz / "scripts" / "backup_n8n.py"),
+               "--datos", str(temporal), "--destino", str(temporal / "copias")],
+              capture_output=True, text=True,
+          )
+          print(salida.stdout)
+          assert salida.returncode == 0, salida.stderr
+          copias = list((temporal / "copias").glob("n8n-*"))
+          assert copias, "no se ha creado ninguna copia"
+          assert (copias[0] / "database.sqlite").exists(), "la copia no tiene la base de datos"
+          assert (copias[0] / "config").exists(), "la copia no tiene la clave de cifrado"
+          print("La copia de seguridad funciona.")
+          PY
