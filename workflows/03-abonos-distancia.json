@@ -122,10 +122,14 @@
     },
     {
       "parameters": {
-        "model": "llama-3.3-70b-versatile",
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "qwen/qwen3.8-27b"
+        },
         "options": {
           "baseURL": "https://api.groq.com/openai/v1",
-          "model": "llama-3.3-70b-versatile",
+          "model": "qwen/qwen3.8-27b",
           "temperature": 0
         }
       },
