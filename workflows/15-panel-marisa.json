@@ -1,0 +1,420 @@
+{
+  "name": "15 · Panel de Marisa",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "panel",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "e5000001-0000-4000-8000-000000000001",
+      "name": "Ver el panel",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -900,
+        300
+      ],
+      "notes": "El panel de Marisa: http://localhost:5678/webhook/panel"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Devuelve UN solo item: el nodo HTTP que va despues hace una sola peticion.\n// Se guarda el rango (hoy y los ultimos 30 dias) y se conserva lo que traia el webhook\n// (la query, para poder pedir el panel en JSON).\nconst entrada = $input.first().json ?? {};\n\nconst hoy = new Intl.DateTimeFormat('en-CA', {\n  timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',\n}).format(new Date());\nconst desde = new Date(hoy + 'T00:00:00Z');\ndesde.setUTCDate(desde.getUTCDate() - 30);\n\nreturn [{ json: { ...entrada, ok: true, hoy, desde: desde.toISOString().slice(0, 10) } }];"
+      },
+      "id": "e5000002-0000-4000-8000-000000000002",
+      "name": "Preparar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=http://tienda:8000/api/ventas?desde={{ $json.desde }}&hasta={{ $json.hoy }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "e5000003-0000-4000-8000-000000000003",
+      "name": "Ventas del periodo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -500,
+        200
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WsD8qReuVdb5h8sd",
+          "name": "Tienda - API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Devuelve UN solo item: el nodo HTTP que va despues hace una sola peticion.\n// Se guarda el rango (hoy y los ultimos 30 dias) y se conserva lo que traia el webhook\n// (la query, para poder pedir el panel en JSON).\nconst entrada = $input.first().json ?? {};\n\nconst hoy = new Intl.DateTimeFormat('en-CA', {\n  timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',\n}).format(new Date());\nconst desde = new Date(hoy + 'T00:00:00Z');\ndesde.setUTCDate(desde.getUTCDate() - 30);\n\nreturn [{ json: { ...entrada, ok: true, hoy, desde: desde.toISOString().slice(0, 10) } }];"
+      },
+      "id": "e5000004-0000-4000-8000-000000000004",
+      "name": "Preparar 2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -300,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=http://tienda:8000/api/abonos?desde={{ $json.desde }}&hasta={{ $json.hoy }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "e5000005-0000-4000-8000-000000000005",
+      "name": "Abonos del periodo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -100,
+        200
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WsD8qReuVdb5h8sd",
+          "name": "Tienda - API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Devuelve UN solo item: el nodo HTTP que va despues hace una sola peticion.\n// Se guarda el rango (hoy y los ultimos 30 dias) y se conserva lo que traia el webhook\n// (la query, para poder pedir el panel en JSON).\nconst entrada = $input.first().json ?? {};\n\nconst hoy = new Intl.DateTimeFormat('en-CA', {\n  timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',\n}).format(new Date());\nconst desde = new Date(hoy + 'T00:00:00Z');\ndesde.setUTCDate(desde.getUTCDate() - 30);\n\nreturn [{ json: { ...entrada, ok: true, hoy, desde: desde.toISOString().slice(0, 10) } }];"
+      },
+      "id": "e5000006-0000-4000-8000-000000000006",
+      "name": "Preparar 3",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        100,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://tienda:8000/api/apartados",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "e5000007-0000-4000-8000-000000000007",
+      "name": "Apartados",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        300,
+        200
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WsD8qReuVdb5h8sd",
+          "name": "Tienda - API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Devuelve UN solo item: el nodo HTTP que va despues hace una sola peticion.\n// Se guarda el rango (hoy y los ultimos 30 dias) y se conserva lo que traia el webhook\n// (la query, para poder pedir el panel en JSON).\nconst entrada = $input.first().json ?? {};\n\nconst hoy = new Intl.DateTimeFormat('en-CA', {\n  timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',\n}).format(new Date());\nconst desde = new Date(hoy + 'T00:00:00Z');\ndesde.setUTCDate(desde.getUTCDate() - 30);\n\nreturn [{ json: { ...entrada, ok: true, hoy, desde: desde.toISOString().slice(0, 10) } }];"
+      },
+      "id": "e5000008-0000-4000-8000-000000000008",
+      "name": "Preparar 4",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://tienda:8000/api/apartados/resumen",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "e5000009-0000-4000-8000-000000000009",
+      "name": "Resumen de la tienda",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        700,
+        200
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WsD8qReuVdb5h8sd",
+          "name": "Tienda - API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// La fecha de hoy se calcula primero: se usa en el resto del panel.\nconst hoy = new Intl.DateTimeFormat('en-CA', {\n  timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',\n}).format(new Date());\nconst mes = hoy.slice(0, 7);\n\n// Monta el panel de Marisa con los datos de la tienda.\n//\n// Las cifras salen de la API (la app es la que las calcula); aqui solo se suman\n// y se pinta. Si el panel se pide en JSON, se devuelve el mismo dato en JSON.\nconst entrada = $input.first().json ?? {};\n\nconst ventas = $('Ventas del periodo').all()\n  .flatMap((i) => (Array.isArray(i.json) ? i.json : [i.json]))\n  .filter((x) => x && x.id !== undefined);\nconst abonos = $('Abonos del periodo').all()\n  .flatMap((i) => (Array.isArray(i.json) ? i.json : [i.json]))\n  .filter((x) => x && x.id !== undefined);\nconst apartados = $('Apartados').all()\n  .flatMap((i) => (Array.isArray(i.json) ? i.json : [i.json]))\n  .filter((x) => x && x.id !== undefined);\nconst resumen = $('Resumen de la tienda').first().json ?? {};\n\nconst euros = (n) => Number(n ?? 0).toFixed(2).replace('.', ',') + ' EUR';\nconst redondear = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;\n\nconst ventasHoy = ventas.filter((v) => String(v.fecha ?? '') === hoy);\nconst abonosHoy = abonos.filter((a) => String(a.fecha ?? '') === hoy);\n\nconst totalVentas = redondear(ventasHoy.reduce((s, v) => s + Number(v.importe ?? 0), 0));\nconst totalAbonos = redondear(abonosHoy.reduce((s, a) => s + Number(a.importe ?? 0), 0));\nconst totalDia = redondear(totalVentas + totalAbonos);\n\nconst activos = apartados.filter((a) => String(a.estado) === 'activo');\nconst pendiente = redondear(activos.reduce((s, a) => s + Number(a.pendiente ?? 0), 0));\n\n\n// Apartados que vencen en los proximos 30 dias.\nconst enDias = (limite) => Math.round(\n  (new Date(String(limite) + 'T00:00:00Z').getTime() - new Date(hoy + 'T00:00:00Z').getTime()) / 86400000,\n);\nconst proximos = activos\n  .map((a) => ({ apartado: a, dias: enDias(a.fecha_limite) }))\n  .filter((x) => x.dias >= 0 && x.dias <= 30)\n  .sort((a, b) => a.dias - b.dias);\n\nconst recaudacionMes = redondear(\n  ventas.filter((v) => String(v.fecha ?? '').slice(0, 7) === mes).reduce((s, v) => s + Number(v.importe ?? 0), 0)\n  + abonos.filter((a) => String(a.fecha ?? '').slice(0, 7) === mes).reduce((s, a) => s + Number(a.importe ?? 0), 0),\n);\nconst ventasMes = ventas.filter((v) => String(v.fecha ?? '').slice(0, 7) === mes).length;\nconst abonosMes = abonos.filter((a) => String(a.fecha ?? '').slice(0, 7) === mes).length;\n\nconst datos = {\n  fecha: hoy,\n  hoy: { ventas: totalVentas, abonos: totalAbonos, total: totalDia, num_ventas: ventasHoy.length, num_abonos: abonosHoy.length },\n  mes: { recaudacion: recaudacionMes, num_ventas: ventasMes, num_abonos: abonosMes },\n  pendiente_cobro: pendiente,\n  apartados: {\n    activos: activos.length,\n    liquidados: resumen.liquidado ?? 0,\n    vencidos: resumen.vencido ?? 0,\n    total: resumen.total ?? apartados.length,\n  },\n  por_vencer: proximos.map((x) => ({\n    id: x.apartado.id,\n    cliente: x.apartado.cliente,\n    producto: x.apartado.producto,\n    talla: x.apartado.talla,\n    pendiente: x.apartado.pendiente,\n    fecha_limite: x.apartado.fecha_limite,\n    dias: x.dias,\n  })),\n};\n\n// Si se pide en JSON, se devuelve el dato y ya esta.\n// La query se pierde en los nodos HTTP (sustituyen el item), asi que se lee\n// del nodo que la guardo: ?formato=json devuelve los datos en JSON.\nconst query = $('Preparar').first().json?.query ?? {};\nconst formato = String(query.formato ?? entrada.query?.formato ?? 'html').toLowerCase();\nif (formato === 'json') {\n  return [{ json: { panel: datos, respuesta: JSON.stringify(datos, null, 2), formato: 'json' } }];\n}\n\nconst escapar = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nconst filasProximos = proximos.length\n  ? proximos.map((x) => `\n        <tr>\n          <td>${escapar(x.apartado.cliente)}</td>\n          <td>${escapar([x.apartado.producto, x.apartado.talla].filter(Boolean).join(' · '))}</td>\n          <td class=\"num\">${euros(x.apartado.pendiente)}</td>\n          <td>${escapar(x.apartado.fecha_limite ?? '')}</td>\n          <td><span class=\"chip ${x.dias <= 7 ? 'chip-urgent' : ''}\">${x.dias === 0 ? 'hoy' : x.dias + ' días'}</span></td>\n        </tr>`).join('')\n  : '<tr><td colspan=\"5\" class=\"vacio\">No hay apartados que vencen en los próximos 30 días</td></tr>';\n\nconst html = `<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<meta http-equiv=\"refresh\" content=\"60\">\n<title>Panel de la tienda · Paso Firme</title>\n<style>\n  :root {\n    --fondo: #f5f3ef; --tarjeta: #fff; --texto: #241f1b; --suave: #6f675f;\n    --borde: #e4ded5; --verde: #2f6f4f; --ambar: #b26a00; --rojo: #a3341f;\n  }\n  * { box-sizing: border-box; }\n  body { margin: 0; background: var(--fondo); color: var(--texto);\n         font-family: system-ui, -apple-system, \"Segoe UI\", sans-serif; }\n  main { max-width: 900px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }\n  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem 1rem; margin-bottom: 1.25rem; }\n  h1 { font-size: 1.35rem; margin: 0; }\n  .fecha { color: var(--suave); font-size: .9rem; }\n  .cifras { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-bottom: 1.25rem; }\n  .cifra { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 14px; padding: 1rem 1.1rem; }\n  .cifra .etiqueta { color: var(--suave); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }\n  .cifra .valor { font-size: 1.5rem; font-weight: 700; margin-top: .25rem; }\n  .cifra .nota { color: var(--suave); font-size: .8rem; margin-top: .2rem; }\n  .destacada { border-color: var(--verde); }\n  .panel { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 14px; padding: 1rem 1.1rem 1.2rem; }\n  .panel h2 { font-size: 1rem; margin: 0 0 .75rem; }\n  table { width: 100%; border-collapse: collapse; font-size: .92rem; }\n  th, td { text-align: left; padding: .55rem .4rem; border-bottom: 1px solid var(--borde); }\n  th { color: var(--suave); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }\n  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }\n  .chip { display: inline-block; padding: .1rem .5rem; border-radius: 999px; background: #eef1ee;\n          color: var(--verde); font-size: .78rem; font-weight: 600; }\n  .chip-urgent { background: #fdeee9; color: var(--rojo); }\n  .vacio { color: var(--suave); text-align: center; padding: 1.2rem 0; }\n  footer { margin-top: 1.5rem; color: var(--suave); font-size: .8rem; text-align: center; }\n  a { color: var(--verde); }\n  @media (max-width: 560px) {\n    main { padding: 1rem .75rem 2.5rem; }\n    .cifra .valor { font-size: 1.3rem; }\n    th:nth-child(2), td:nth-child(2) { display: none; }\n  }\n</style>\n</head>\n<body>\n<main>\n  <header>\n    <h1>Zapatería Paso Firme</h1>\n    <span class=\"fecha\">${escapar(datos.fecha)} · se actualiza cada minuto</span>\n  </header>\n\n  <section class=\"cifras\">\n    <div class=\"cifra destacada\">\n      <div class=\"etiqueta\">Cobrado hoy</div>\n      <div class=\"valor\">${euros(datos.hoy.total)}</div>\n      <div class=\"nota\">${datos.hoy.num_ventas} ventas · ${datos.hoy.num_abonos} abonos</div>\n    </div>\n    <div class=\"cifra\">\n      <div class=\"etiqueta\">Recaudado este mes</div>\n      <div class=\"valor\">${euros(datos.mes.recaudacion)}</div>\n      <div class=\"nota\">${datos.mes.num_ventas} ventas · ${datos.mes.num_abonos} abonos del mes</div>\n    </div>\n    <div class=\"cifra\">\n      <div class=\"etiqueta\">Pendiente de cobro</div>\n      <div class=\"valor\">${euros(datos.pendiente_cobro)}</div>\n      <div class=\"nota\">${datos.apartados.activos} apartados activos</div>\n    </div>\n    <div class=\"cifra\">\n      <div class=\"etiqueta\">Apartados</div>\n      <div class=\"valor\">${datos.apartados.activos} / ${datos.apartados.total}</div>\n      <div class=\"nota\">${datos.apartados.liquidados} liquidados · ${datos.apartados.vencidos} vencidos</div>\n    </div>\n  </section>\n\n  <section class=\"panel\">\n    <h2>Se vencen en los próximos 30 días</h2>\n    <table>\n      <thead>\n        <tr><th>Cliente</th><th>Producto</th><th class=\"num\">Pendiente</th><th>Fecha límite</th><th>Quedan</th></tr>\n      </thead>\n      <tbody>${filasProximos}\n      </tbody>\n    </table>\n  </section>\n\n  <footer>\n    Zapatería Paso Firme · datos de la app de la tienda ·\n    <a href=\"/webhook/panel?formato=json\">ver los datos en JSON</a>\n  </footer>\n</main>\n</body>\n</html>`;\n\nreturn [{ json: { panel: datos, html, respuesta: html, formato: 'html' } }];"
+      },
+      "id": "e500000a-0000-4000-8000-00000000000a",
+      "name": "Construir el panel",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "e500000b-0000-4000-8000-00000000000b",
+      "name": "Mostrar el panel",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e500000c-0000-4000-8000-00000000000c",
+              "leftValue": "={{ $json.formato }}",
+              "rightValue": "json",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e500000c-0000-4000-8000-00000000000c",
+      "name": "¿Lo piden en JSON?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.respuesta }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "e500000d-0000-4000-8000-00000000000d",
+      "name": "Responder JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1320,
+        180
+      ]
+    }
+  ],
+  "connections": {
+    "Ver el panel": {
+      "main": [
+        [
+          {
+            "node": "Preparar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar": {
+      "main": [
+        [
+          {
+            "node": "Ventas del periodo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar 2": {
+      "main": [
+        [
+          {
+            "node": "Abonos del periodo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar 3": {
+      "main": [
+        [
+          {
+            "node": "Apartados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apartados": {
+      "main": [
+        [
+          {
+            "node": "Preparar 4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar 4": {
+      "main": [
+        [
+          {
+            "node": "Resumen de la tienda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resumen de la tienda": {
+      "main": [
+        [
+          {
+            "node": "Construir el panel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construir el panel": {
+      "main": [
+        [
+          {
+            "node": "¿Lo piden en JSON?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ventas del periodo": {
+      "main": [
+        [
+          {
+            "node": "Preparar 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Abonos del periodo": {
+      "main": [
+        [
+          {
+            "node": "Preparar 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Lo piden en JSON?": {
+      "main": [
+        [
+          {
+            "node": "Responder JSON",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mostrar el panel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}
