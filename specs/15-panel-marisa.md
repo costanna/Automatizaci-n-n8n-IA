@@ -53,6 +53,10 @@ Ninguna: el panel consulta la API de la tienda cada vez que se abre.
 - Las cifras las calcula la app; el panel solo las suma y las pinta.
 - La página se **actualiza sola** cada minuto (`<meta http-equiv="refresh">`), así que Marisa
   puede tenerla abierta en el móvil.
+- **Tema claro y oscuro**: el panel arranca con el tema que tenga el sistema
+  (`prefers-color-scheme`) y hay un interruptor en la cabecera para cambiarlo a mano. La
+  elección se guarda en el navegador (`localStorage`) y se aplica **antes de pintar la
+  página**, para que no haya destellos.
 - R-A7: el panel no se lleva a ningún modelo ni a ningún servicio externo.
 
 ## Casos de error
