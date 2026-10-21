@@ -1,0 +1,17 @@
+# Copia de seguridad diaria de los datos de n8n, para el cron de Render.
+#
+# Con SQLite copia la base de datos y la clave de cifrado; con Postgres hace un
+# pg_dump. La copia se deja en /backups (hay que montar ahí un disco o un bucket).
+FROM python:3.12-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY scripts/backup_n8n.py /app/scripts/backup_n8n.py
+
+ENV DB_TYPE=sqlite
+ENV N8N_USER_FOLDER=/home/node/.n8n
+
+CMD ["sh", "-c", "python /app/scripts/backup_n8n.py --datos ${N8N_USER_FOLDER} --destino /backups --conservar 14"]

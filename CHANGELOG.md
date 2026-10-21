@@ -4,7 +4,32 @@ Todas las novedades del proyecto. El formato sigue
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el versionado es
 [SemVer](https://semver.org/lang/es/).
 
+## [1.3.0] - 2026-10-21
+
+### Añadido
+
+- `15 · Panel de Marisa` (HU-15): una pantalla con lo cobrado hoy, lo recaudado este mes, lo
+  pendiente de cobro y los apartados que vencen en los próximos 30 días. La sirve n8n (la clave
+  de la API no sale nunca al navegador) y se actualiza sola cada minuto. La misma URL con
+  `?formato=json` devuelve los datos en JSON.
+- `scripts/backup_n8n.py`: copia de seguridad de los datos de n8n (base de datos, clave de
+  cifrado y flujos) con retención configurable.
+- Servicio `backup` en el `docker-compose.yml`: hace la copia **cada 24 horas** automáticamente.
+- Servicio `postgres` (perfil opcional) para usar Postgres en vez de SQLite.
+- `deploy/`: blueprint de Render (n8n con HTTPS, Postgres y cron de copias), `Dockerfile.n8n` y
+  `Dockerfile.backup`.
+- `docs/despliegue.md`: la guía de despliegue en la nube, con HTTPS, las copias y cómo
+  restaurarlas.
+
+### Corregido
+
+- La CI ahora **importa los flujos en n8n de verdad** (no solo valida el JSON) y prueba el
+  script de copia de seguridad: un JSON puede ser válido y aun así no importarse.
+- El panel: la query del webhook se perdía en los nodos HTTP y las cifras de "hoy" salían
+  con el total del periodo.
+
 ## [1.2.0] - 2026-10-21
+
 
 ### Añadido
 

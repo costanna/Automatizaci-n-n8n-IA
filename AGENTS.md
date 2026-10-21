@@ -185,6 +185,8 @@ Este proyecto se ha probado con **n8n 2.44**. Estas son las cosas que fallan en 
 | Un nodo Code que devuelve una lista | Devuelve **un item por elemento** si el nodo siguiente es HTTP | Si no, hace una sola petición |
 | Buscar por teléfono | La búsqueda `q` de la app es un `LIKE`: `600000001` no está en `600 000 001` | Pedir todos los apartados y filtrar por dígitos en un nodo Code |
 | El trigger de formulario de n8n 2.6 | No se deja publicar si el flujo tiene otra cosa mal | Se sustituyó por un webhook GET que sirve el formulario y otro POST que lo recibe |
+| La query de un webhook | Los nodos HTTP **sustituyen** el item, así que la query se pierde | Léela del nodo que la guardó (`$('Preparar').first().json.query`) |
+| `const` usado antes de declararse | En el nodo Code da `Cannot access 'x' before initialization` | Decláralo al principio del código |
 
 ## 10. Cómo se trabaja: Spec-Driven Development
 

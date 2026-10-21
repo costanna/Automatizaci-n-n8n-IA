@@ -29,6 +29,9 @@ node_modules/
 # Correos que envia el SMTP de desarrollo (son datos de prueba, no se versionan)
 data/envios/
 
+# Copias de seguridad de n8n (las hace el servicio 'backup')
+backups/
+
 # Sistema operativo / editores
 .DS_Store
 Thumbs.db

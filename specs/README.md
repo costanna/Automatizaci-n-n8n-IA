@@ -22,6 +22,7 @@ este vocabulario para no inventar conceptos.
 | [`11-apartados-desde-casa.md`](11-apartados-desde-casa.md) | HU-13 · Apartados desde casa |
 | [`13-ventas-datxfono.md`](13-ventas-datxfono.md) | HU-13 · Ventas del datáfono |
 | [`14-asistente-telegram.md`](14-asistente-telegram.md) | HU-11 y HU-12 · Asistente de Telegram |
+| [`15-panel-marisa.md`](15-panel-marisa.md) | HU-15 · Panel de Marisa |
 
 ## Plantilla de una spec
 
@@ -63,3 +64,5 @@ este vocabulario para no inventar conceptos.
 | HU-12 | 14 | `14-asistente-telegram.json` + `sub-tool-cifras-tienda.json` | `tests/flujo-14/` |
 | HU-13 | 11 y 13 | `11-apartados-desde-casa.json`, `13-ventas-datxfono.json` | `tests/flujo-11/`, `tests/flujo-13/` |
 | HU-14 | 00 y 14 | `00-despachador-eventos.json` (token), `14-asistente-telegram.json` | `docs/rgpd.md` |
+| HU-15 | 15 | `15-panel-marisa.json` | `docs/evidencias/panel.html` |
+| HU-16 | — | `deploy/`, `scripts/backup_n8n.py` | `.github/workflows/validar-flujos.yml` |

@@ -1,0 +1,120 @@
+﻿<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="refresh" content="60">
+<title>Panel de la tienda · Paso Firme</title>
+<style>
+  :root {
+    --fondo: #f5f3ef; --tarjeta: #fff; --texto: #241f1b; --suave: #6f675f;
+    --borde: #e4ded5; --verde: #2f6f4f; --ambar: #b26a00; --rojo: #a3341f;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--texto);
+         font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 900px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem 1rem; margin-bottom: 1.25rem; }
+  h1 { font-size: 1.35rem; margin: 0; }
+  .fecha { color: var(--suave); font-size: .9rem; }
+  .cifras { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-bottom: 1.25rem; }
+  .cifra { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 14px; padding: 1rem 1.1rem; }
+  .cifra .etiqueta { color: var(--suave); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
+  .cifra .valor { font-size: 1.5rem; font-weight: 700; margin-top: .25rem; }
+  .cifra .nota { color: var(--suave); font-size: .8rem; margin-top: .2rem; }
+  .destacada { border-color: var(--verde); }
+  .panel { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 14px; padding: 1rem 1.1rem 1.2rem; }
+  .panel h2 { font-size: 1rem; margin: 0 0 .75rem; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  th, td { text-align: left; padding: .55rem .4rem; border-bottom: 1px solid var(--borde); }
+  th { color: var(--suave); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .chip { display: inline-block; padding: .1rem .5rem; border-radius: 999px; background: #eef1ee;
+          color: var(--verde); font-size: .78rem; font-weight: 600; }
+  .chip-urgent { background: #fdeee9; color: var(--rojo); }
+  .vacio { color: var(--suave); text-align: center; padding: 1.2rem 0; }
+  footer { margin-top: 1.5rem; color: var(--suave); font-size: .8rem; text-align: center; }
+  a { color: var(--verde); }
+  @media (max-width: 560px) {
+    main { padding: 1rem .75rem 2.5rem; }
+    .cifra .valor { font-size: 1.3rem; }
+    th:nth-child(2), td:nth-child(2) { display: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Zapatería Paso Firme</h1>
+    <span class="fecha">2026-10-21 · se actualiza cada minuto</span>
+  </header>
+
+  <section class="cifras">
+    <div class="cifra destacada">
+      <div class="etiqueta">Cobrado hoy</div>
+      <div class="valor">213,65 EUR</div>
+      <div class="nota">4 ventas · 1 abonos</div>
+    </div>
+    <div class="cifra">
+      <div class="etiqueta">Recaudado este mes</div>
+      <div class="valor">2652,10 EUR</div>
+      <div class="nota">69 ventas · 38 abonos del mes</div>
+    </div>
+    <div class="cifra">
+      <div class="etiqueta">Pendiente de cobro</div>
+      <div class="valor">587,15 EUR</div>
+      <div class="nota">16 apartados activos</div>
+    </div>
+    <div class="cifra">
+      <div class="etiqueta">Apartados</div>
+      <div class="valor">16 / 24</div>
+      <div class="nota">7 liquidados · 1 vencidos</div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Se vencen en los próximos 30 días</h2>
+    <table>
+      <thead>
+        <tr><th>Cliente</th><th>Producto</th><th class="num">Pendiente</th><th>Fecha límite</th><th>Quedan</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Pablo Rubio</td>
+          <td>Bota montaña · 43</td>
+          <td class="num">49,90 EUR</td>
+          <td>2026-10-22</td>
+          <td><span class="chip chip-urgent">1 días</span></td>
+        </tr>
+        <tr>
+          <td>David Romero</td>
+          <td>Deportiva blanca · 44</td>
+          <td class="num">15,00 EUR</td>
+          <td>2026-10-28</td>
+          <td><span class="chip chip-urgent">7 días</span></td>
+        </tr>
+        <tr>
+          <td>Laura Ortega</td>
+          <td>Deportiva blanca · 37</td>
+          <td class="num">10,00 EUR</td>
+          <td>2026-10-28</td>
+          <td><span class="chip chip-urgent">7 días</span></td>
+        </tr>
+        <tr>
+          <td>Elena Castro</td>
+          <td>Zapato vestir hombre · 38</td>
+          <td class="num">70,00 EUR</td>
+          <td>2026-11-05</td>
+          <td><span class="chip ">15 días</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer>
+    Zapatería Paso Firme · datos de la app de la tienda ·
+    <a href="/webhook/panel?formato=json">ver los datos en JSON</a>
+  </footer>
+</main>
+</body>
+</html>
