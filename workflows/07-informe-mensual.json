@@ -1,0 +1,370 @@
+{
+  "name": "07 · Informe mensual",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 1 * *"
+            }
+          ]
+        }
+      },
+      "id": "5a9af3bc-ec43-45df-a9ef-d8cf3f2fe36f",
+      "name": "Dia 1 de cada mes a las 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Rango del mes anterior (el informe del dia 1 habla del mes que acaba de pasar).\nconst hoy = new Intl.DateTimeFormat('en-CA', {\n  timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',\n}).format(new Date());\n\nconst [anio, mes] = hoy.split('-').map(Number);\nconst primero = new Date(Date.UTC(anio, mes - 2, 1));\nconst ultimo = new Date(Date.UTC(anio, mes - 1, 0));\n\nconst iso = (d) => d.toISOString().slice(0, 10);\nconst desde = iso(primero);\nconst hasta = iso(ultimo);\nconst nombre = primero.toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'UTC' });\n\nreturn [{ json: { desde, hasta, mes: nombre } }];\n"
+      },
+      "id": "27d13d24-58b4-43fa-9918-e8ceb1d6b32e",
+      "name": "Rango del mes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=http://tienda:8000/api/ventas?desde={{ $json.desde }}&hasta={{ $json.hasta }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "name": "Ventas del mes",
+      "id": "411d599c-7999-49dd-89af-7486649f3b09",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -120,
+        160
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WsD8qReuVdb5h8sd",
+          "name": "Tienda - API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=http://tienda:8000/api/abonos?desde={{ $json.desde }}&hasta={{ $json.hasta }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "name": "Abonos del mes",
+      "id": "63fd4991-5c18-4130-9039-38849a7b442a",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -120,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WsD8qReuVdb5h8sd",
+          "name": "Tienda - API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "http://tienda:8000/api/apartados",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "name": "Apartados",
+      "id": "c54cb14f-700e-4f0c-b0a5-db0b28828dca",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -120,
+        440
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WsD8qReuVdb5h8sd",
+          "name": "Tienda - API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "http://tienda:8000/api/vales",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "name": "Vales",
+      "id": "3ab77ec5-ab4b-4a3b-a94f-3a694b8adefa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -120,
+        580
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WsD8qReuVdb5h8sd",
+          "name": "Tienda - API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Calcula el informe del mes (HU-08).\n//\n// - Recaudacion: ventas directas y abonos por separado (los abonos iniciales\n//   cuentan en el mes en que se crearon).\n// - Pendiente de cobro: suma de lo que falta de los apartados activos.\n// - Apartados nuevos, liquidados y vencidos del mes.\n//\n// Ninguna cifra se inventa: todas salen de la API y aqui solo se suman.\nconst rango = $('Rango del mes').first().json ?? {};\nconst desde = rango.desde;\nconst hasta = rango.hasta;\n\nconst ventas = $('Ventas del mes').all().flatMap((i) => (Array.isArray(i.json) ? i.json : [i.json])).filter((v) => v && v.id !== undefined);\nconst abonos = $('Abonos del mes').all().flatMap((i) => (Array.isArray(i.json) ? i.json : [i.json])).filter((a) => a && a.id !== undefined);\nconst apartados = $('Apartados').all().flatMap((i) => (Array.isArray(i.json) ? i.json : [i.json])).filter((a) => a && a.id !== undefined);\nconst vales = $('Vales').all().flatMap((i) => (Array.isArray(i.json) ? i.json : [i.json])).filter((v) => v && v.id !== undefined);\n\nconst redondear = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;\nconst dentro = (fecha) => String(fecha ?? '') >= desde && String(fecha ?? '') <= hasta;\n\nconst ventasDirectas = redondear(ventas.reduce((s, v) => s + Number(v.importe ?? 0), 0));\nconst totalAbonos = redondear(abonos.reduce((s, a) => s + Number(a.importe ?? 0), 0));\n\nconst pendientes = apartados.filter((a) => String(a.estado) === 'activo');\nconst pendienteTotal = redondear(pendientes.reduce((s, a) => s + Number(a.pendiente ?? 0), 0));\n\nconst porEstado = { activo: 0, liquidado: 0, vencido: 0 };\nfor (const a of apartados) {\n  if (porEstado[a.estado] !== undefined) porEstado[a.estado] += 1;\n}\n\n// Un apartado ha tenido movimiento en el mes si tiene algun abono dentro del mes.\nconst conMovimiento = new Set(abonos.map((a) => a.apartado_id));\nconst nuevos = apartados.filter((a) => dentro(a.fecha));\nconst liquidados = apartados.filter((a) => String(a.estado) === 'liquidado' && conMovimiento.has(a.id));\nconst vencidos = vales.filter((v) => dentro(v.fecha));\n\nreturn [{\n  json: {\n    desde,\n    hasta,\n    mes: rango.mes,\n    ventas_directas: ventasDirectas,\n    abonos: totalAbonos,\n    recaudacion: redondear(ventasDirectas + totalAbonos),\n    pendiente_cobro: pendienteTotal,\n    apartados_nuevos: nuevos.length,\n    apartados_liquidados: liquidados.length,\n    apartados_vencidos: vencidos.length,\n    por_estado: porEstado,\n    num_ventas: ventas.length,\n    num_abonos: abonos.length,\n    detalle_liquidados: liquidados.map((a) => ({ id: a.id, cliente: a.cliente, producto: a.producto, precio: a.precio })),\n    detalle_vencidos: vencidos.map((v) => ({ codigo: v.codigo, importe: v.importe, apartado_id: v.apartado_id })),\n  },\n}];\n"
+      },
+      "name": "Calcular el informe",
+      "id": "a920d320-c2f5-490b-bfcc-12e697c71deb",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        140,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Monta el informe mensual para Marisa.\nconst i = $input.first().json ?? {};\nconst emailTienda = $vars.EMAIL_MARISA || 'marisa@pasofirme.example';\nconst euros = (n) => Number(n ?? 0).toFixed(2).replace('.', ',') + ' EUR';\nconst escapar = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nconst cuerpo = [\n  'Informe de ' + (i.mes ?? '') + ' (' + (i.desde ?? '') + ' a ' + (i.hasta ?? '') + ')',\n  '',\n  'RECAUDACION',\n  '  Ventas directas: ' + euros(i.ventas_directas) + ' (' + (i.num_ventas ?? 0) + ' ventas)',\n  '  Abonos de apartados: ' + euros(i.abonos) + ' (' + (i.num_abonos ?? 0) + ' abonos)',\n  '  Total recaudado: ' + euros(i.recaudacion),\n  '',\n  'PENDIENTE DE COBRO',\n  '  Total por cobrar: ' + euros(i.pendiente_cobro),\n  '  Apartados activos: ' + ((i.por_estado ?? {}).activo ?? 0),\n  '',\n  'APARTADOS DEL MES',\n  '  Nuevos: ' + (i.apartados_nuevos ?? 0),\n  '  Liquidados: ' + (i.apartados_liquidados ?? 0),\n  '  Vencidos: ' + (i.apartados_vencidos ?? 0),\n  '',\n  'Un saludo,',\n  'Zapateria Paso Firme',\n].join('\\n');\n\nconst tabla = '<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\">'\n  + '<tr><th>Concepto</th><th>Importe</th></tr>'\n  + '<tr><td>Ventas directas</td><td>' + euros(i.ventas_directas) + '</td></tr>'\n  + '<tr><td>Abonos de apartados</td><td>' + euros(i.abonos) + '</td></tr>'\n  + '<tr><td><strong>Total recaudado</strong></td><td><strong>' + euros(i.recaudacion) + '</strong></td></tr>'\n  + '<tr><td>Pendiente de cobro</td><td>' + euros(i.pendiente_cobro) + '</td></tr>'\n  + '</table>';\n\nreturn [{\n  json: {\n    canal: 'email',\n    email: emailTienda,\n    asunto: 'Informe mensual · ' + (i.mes ?? ''),\n    cuerpo,\n    cuerpo_html: '<p>' + escapar(cuerpo).replace(/\\n/g, '<br>') + '</p>' + tabla,\n  },\n}];\n"
+      },
+      "name": "Preparar el informe",
+      "id": "8a513606-110b-476c-8bff-b6dba2089b2e",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "qiU7wQ7zQlr3HNNp",
+          "mode": "list",
+          "cachedResultName": "SUB · Notificar"
+        },
+        "mode": "once",
+        "options": {}
+      },
+      "name": "Notificar",
+      "id": "e3691d4b-e432-4886-b96b-879dec1f2255",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Devuelve UN solo item con el rango del mes: el nodo HTTP que va despues\n// hace una sola peticion, en vez de una por cada item que le llega.\nconst origen = $('Rango del mes').first().json;\nreturn [{ json: { desde: origen.desde, hasta: origen.hasta } }];"
+      },
+      "id": "bbbb1111-1111-4111-8111-111111111111",
+      "name": "Preparar ventas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -40,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Devuelve UN solo item con el rango del mes: el nodo HTTP que va despues\n// hace una sola peticion, en vez de una por cada item que le llega.\nconst origen = $('Rango del mes').first().json;\nreturn [{ json: { desde: origen.desde, hasta: origen.hasta } }];"
+      },
+      "id": "bbbb2222-2222-4222-8222-222222222222",
+      "name": "Preparar abonos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -40,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Devuelve UN solo item con el rango del mes: el nodo HTTP que va despues\n// hace una sola peticion, en vez de una por cada item que le llega.\nconst origen = $('Rango del mes').first().json;\nreturn [{ json: { desde: origen.desde, hasta: origen.hasta } }];"
+      },
+      "id": "bbbb3333-3333-4333-8333-333333333333",
+      "name": "Preparar apartados",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -40,
+        440
+      ]
+    }
+  ],
+  "connections": {
+    "Dia 1 de cada mes a las 09:00": {
+      "main": [
+        [
+          {
+            "node": "Rango del mes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apartados": {
+      "main": [
+        [
+          {
+            "node": "Vales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vales": {
+      "main": [
+        [
+          {
+            "node": "Calcular el informe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular el informe": {
+      "main": [
+        [
+          {
+            "node": "Preparar el informe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar el informe": {
+      "main": [
+        [
+          {
+            "node": "Notificar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rango del mes": {
+      "main": [
+        [
+          {
+            "node": "Preparar ventas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar ventas": {
+      "main": [
+        [
+          {
+            "node": "Ventas del mes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ventas del mes": {
+      "main": [
+        [
+          {
+            "node": "Preparar abonos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar abonos": {
+      "main": [
+        [
+          {
+            "node": "Abonos del mes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Abonos del mes": {
+      "main": [
+        [
+          {
+            "node": "Preparar apartados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar apartados": {
+      "main": [
+        [
+          {
+            "node": "Apartados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}
