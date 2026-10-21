@@ -4,6 +4,30 @@ Todas las novedades del proyecto. El formato sigue
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el versionado es
 [SemVer](https://semver.org/lang/es/).
 
+## [1.1.0] - 2026-10-21
+
+### Añadido
+
+- `data/config.csv`: la configuración de los flujos (a quién se avisa, el umbral de la venta
+  grande, los días de aviso) sale de aquí. Los flujos lo leen en cada ejecución, así que se
+  cambia **sin tocar ningún flujo** ni republicar nada (criterio de HU-09).
+- `docs/bitacora.md`: la bitácora técnica del proyecto, con las decisiones, la comparativa de
+  modelos y los doce fallos encontrados al construir y probar los flujos.
+
+### Corregido
+
+- La configuración ya no dependía de las variables de n8n (`$vars`), que en la edición
+  comunitaria no existen, ni de `$env`, que n8n 2.x bloquea en las expresiones
+  (`access to env vars denied`). Ahora se lee de `data/config.csv`.
+- El valor `DIAS_AVISO_VENCIMIENTO` va entre comillas en el CSV: `7,1` sin comillas rompía la
+  lectura del fichero.
+- La configuración se lee **sin BOM**: un fichero guardado con BOM añadía un carácter invisible
+  al nombre de la primera clave.
+- El flujo 06 vuelve a leer los apartados del nodo que los pide a la API (la configuración va
+  por delante en la cadena).
+- Los nodos del flujo 03 se llaman «Extraer los datos» y «Modelo de lenguaje», en vez de
+  nombres con siglas.
+
 ## [1.0.1] - 2026-10-21
 
 ### Corregido
