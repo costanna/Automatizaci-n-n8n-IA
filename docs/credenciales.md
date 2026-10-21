@@ -14,7 +14,12 @@
 | `Telegram - Paso Firme` | **Telegram API** | El token del bot | `sub-notificar` (canal opcional) |
 | `IA - Groq` | **OpenAI compatible** | La clave del proveedor (Groq, OpenRouter, Gemini…) y la URL base | `03 · Abonos a distancia` (extraer los datos del aviso) |
 | `Gmail - Paso Firme` | **Gmail OAuth2** | La cuenta de Gmail de la tienda | Alternativa al SMTP para enviar |
-| `Histórico - Sheets` | **Google Sheets** | La hoja de los cierres | Opcional: el histórico también se guarda en los static data del flujo |
+
+> **Ningún flujo necesita una credencial de Google Sheets.** El histórico de cierres y el de
+> recordatorios se guarda en los *static data* de cada flujo (la memoria de n8n entre
+> ejecuciones), que es lo que hace `06 · Recordatorios y vencimientos` para no avisar dos veces al
+> mismo cliente. Si algún día se quiere el histórico en una hoja de cálculo, se añade el nodo
+> *Google Sheets* en `05 · Cierre diario` y la credencial `Histórico - Sheets` en esta tabla.
 
 ### Cómo se crea cada una
 
