@@ -63,6 +63,9 @@ En n8n 2.x, un flujo con webhook **no recibe nada hasta que se publica** (botón
 | `00 · Despachador de eventos` | Sí | Es el webhook que usa la app (`/webhook/tienda`) |
 | `01`, `02`, `04` | Sí | Son subflujos: se ejecutan desde el despachador |
 | `03 · Abonos a distancia` | Sí | Tiene webhook de prueba y trigger de IMAP |
+| `11 · Apartados desde casa` | Sí | El formulario está en `/webhook/apartar-zapatos` |
+| `13 · Ventas del datáfono` | Sí | Importa cada noche a las 02:00; también se puede lanzar a mano con `POST /webhook/datxfono` |
+| `14 · Asistente de Telegram` | Sí | Necesita un bot de Telegram (ver más abajo) |
 | `05`, `06`, `07` | Sí | Programados: sin publicar no se ejecutan |
 | `08 · Avisos de error` | Sí | Y además hay que marcarlo como *Error Workflow* en los demás |
 | `sub-notificar`, `sub-buscar-apartado`, `sub-avisar-vale` | Sí | Los usan los demás flujos |
@@ -75,6 +78,19 @@ llama a otro que no esté publicado.
 
 1. Publica `08 · Avisos de error`.
 2. En cada flujo que deba avisar: *Settings → Error Workflow → 08 · Avisos de error*.
+
+## 4 bis. El bot de Telegram (flujo 14)
+
+1. Habla con [@BotFather](https://t.me/BotFather) en Telegram y crea un bot: te da un token
+   (parecido a `123456789:AAH...`).
+2. En n8n, edita la credencial `Telegram - Paso Firme` y pega ese token.
+3. En `data/config.csv`, pon tu chat id en `TELEGRAM_ADMIN_ID` (solo tú debes poder preguntar
+   por las cifras de la tienda). Para saber tu chat id, escribe cualquier cosa al bot y míralo en
+   *Executions* → el nodo *Telegram Trigger* → `message.chat.id`.
+4. Publica el flujo y habla con el bot.
+
+Sin la credencial, el flujo se publica pero no recibe mensajes; el resto de flujos no se ven
+afectados.
 
 ## 5. Probar
 
