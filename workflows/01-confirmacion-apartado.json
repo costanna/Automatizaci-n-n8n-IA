@@ -1,0 +1,82 @@
+{
+  "name": "01 · Confirmación de apartado",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "76865574-5da0-4783-b072-d9b7ea90bbc0",
+      "name": "Datos del apartado",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Mensaje de confirmacion del apartado (HU-01).\n//\n// Los importes (precio, abonado, pendiente) se COPIAN de la API de la tienda:\n// este nodo no calcula nada. Si el cliente no tiene correo, el mensaje va a la\n// tienda para que avise por otra via (regla A5: el flujo no falla).\nconst entrada = $input.first().json ?? {};\nconst d = entrada.datos ?? entrada;\n\nconst euros = (n) => Number(n ?? 0).toFixed(2).replace('.', ',') + ' EUR';\nconst escapar = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst html = (s) => '<p>' + escapar(s).replace(/\\n/g, '<br>') + '</p>';\n\nconst emailTienda = $vars.EMAIL_MARISA || 'marisa@pasofirme.example';\nconst producto = [d.producto, d.talla].filter(Boolean).join(' · ');\n\nconst cuerpoCliente = [\n  'Hola ' + (d.cliente ?? '') + ',',\n  '',\n  'Has apartado ' + producto + ' por ' + euros(d.precio) + '.',\n  '',\n  'Abonado: ' + euros(d.abonado),\n  'Te queda por pagar: ' + euros(d.pendiente),\n  'Fecha limite para pagarlo: ' + (d.fecha_limite ?? ''),\n  '',\n  'Tienes 90 dias desde hoy para terminar el pago. Si se pasa el plazo, los zapatos',\n  'vuelven a la tienda y lo abonado se convierte en un vale de compra.',\n  '',\n  'Gracias!',\n  'Zapateria Paso Firme',\n].join('\\n');\n\nconst cuerpoTienda = [\n  'No se ha podido avisar al cliente del apartado #' + (d.id ?? '') + ' (' + (d.cliente ?? '') + '): no tiene correo electronico.',\n  '',\n  'Apartado: ' + producto,\n  'Abonado: ' + euros(d.abonado),\n  'Pendiente: ' + euros(d.pendiente),\n  'Fecha limite: ' + (d.fecha_limite ?? ''),\n  '',\n  'Avisale por telefono o por aqui.',\n].join('\\n');\n\nconst emailCliente = String(d.email ?? '').trim();\nconst esCliente = emailCliente.length > 0;\n\nconst mensaje = esCliente\n  ? { canal: 'email', email: emailCliente, asunto: 'Tu apartado · Paso Firme', cuerpo: cuerpoCliente }\n  : { canal: 'email', email: emailTienda, asunto: 'Apartado #' + (d.id ?? '') + ' · el cliente no tiene correo', cuerpo: cuerpoTienda };\n\nreturn [{ json: { ...mensaje, cuerpo_html: html(mensaje.cuerpo), avisado_al_cliente: esCliente, apartado_id: d.id ?? null } }];\n"
+      },
+      "id": "5a9af3bc-ec43-45df-a9ef-d8cf3f2fe36f",
+      "name": "Preparar confirmacion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "qiU7wQ7zQlr3HNNp",
+          "mode": "list",
+          "cachedResultName": "SUB · Notificar"
+        },
+        "mode": "once",
+        "options": {}
+      },
+      "id": "27d13d24-58b4-43fa-9918-e8ceb1d6b32e",
+      "name": "Notificar",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        260,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Datos del apartado": {
+      "main": [
+        [
+          {
+            "node": "Preparar confirmacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar confirmacion": {
+      "main": [
+        [
+          {
+            "node": "Notificar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}

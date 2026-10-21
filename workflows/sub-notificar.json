@@ -1,0 +1,301 @@
+{
+  "name": "SUB · Notificar",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "47f97d2e-a1f7-401c-af9d-c4d93b193d53",
+      "name": "Cuando lo llama otro flujo",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3,
+      "position": [-280, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Normaliza la notificacion que pide el flujo que llama.\n// Aqui no se calcula ninguna cifra: el texto y los importes los pone el flujo que llama\n// (que los ha copiado de la API de la tienda). Este subflujo solo se encarga de enviarlo.\nconst entrada = $input.first().json ?? {};\n\nconst cuerpoTexto = String(entrada.cuerpo ?? '').trim();\nconst cuerpoHtml = entrada.cuerpo_html\n  ? String(entrada.cuerpo_html)\n  : '<p>' + cuerpoTexto.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\\n/g, '<br>') + '</p>';\n\nconst canal = String(entrada.canal ?? 'email').toLowerCase();\nconst chatId = String(entrada.chat_id ?? '').trim();\n\nreturn [{\n  json: {\n    canal,\n    enviar_email: (canal === 'email' || canal === 'ambos') && Boolean(String(entrada.email ?? '').trim()),\n    // Sin chat_id no hay a quien mandar el Telegram: se salta en silencio.\n    enviar_telegram: (canal === 'telegram' || canal === 'ambos') && Boolean(chatId),\n    email: String(entrada.email ?? entrada.destinatario ?? '').trim(),\n    chat_id: chatId,\n    asunto: String(entrada.asunto ?? 'Aviso · Paso Firme'),\n    cuerpo: cuerpoTexto,\n    cuerpo_html: cuerpoHtml,\n  },\n}];\n"
+      },
+      "id": "2973a06f-d75c-4cbb-842b-3923e49c0284",
+      "name": "Preparar envio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-60, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5eed154e-1a62-4ac5-9d7c-578c55b3304a",
+              "leftValue": "={{ $json.enviar_email }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f91fbef9-9f1a-4a94-885c-f7fa85eb26f9",
+      "name": "¿Enviar email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [160, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $vars.EMAIL_TIENDA || 'tienda@pasofirme.example' }}",
+        "fromName": "Zapateria Paso Firme",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ $json.asunto }}",
+        "emailFormat": "both",
+        "text": "={{ $json.cuerpo }}",
+        "html": "={{ $json.cuerpo_html }}",
+        "options": {}
+      },
+      "id": "8e0cc274-3fef-4c7f-9683-09d7e1149824",
+      "name": "Enviar email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [400, 180],
+      "credentials": {
+        "smtp": {
+          "id": "8VDlXyEOFVE0xfEf",
+          "name": "SMTP - Paso Firme"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// No habia direccion de correo: no se intenta enviar nada por email.\nconst original = $('Preparar envio').first().json ?? {};\nreturn [{ json: { ...original, email_enviado: false, email_error: 'No hay correo de destino' } }];\n"
+      },
+      "id": "9d7521b0-f1f3-4e1c-b2b6-17bfb1b795d1",
+      "name": "No hay email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 420]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// El nodo de envio sustituye el item por su propia salida, asi que el original\n// se recupera por el nombre del nodo que lo preparo.\nconst original = $('Preparar envio').first().json ?? {};\nconst actual = $input.first().json ?? {};\n\nlet email_enviado;\nlet email_error;\nif (typeof actual.email_enviado === 'boolean') {\n  // Venia de la rama 'No hay email'\n  email_enviado = actual.email_enviado;\n  email_error = actual.email_error ?? null;\n} else {\n  const error = actual.error ?? null;\n  email_enviado = !error;\n  email_error = error ? String(error) : null;\n}\n\nreturn [{ json: { ...original, email_enviado, email_error } }];\n"
+      },
+      "id": "323c0b57-7c1f-4c8d-9907-70f886b9c3b5",
+      "name": "Anotar email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "76c21f3c-447e-4ab7-8dde-c18dc5bd1c0a",
+              "leftValue": "={{ $json.enviar_telegram }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f32cece8-570c-422f-b537-8be48bf2fdf9",
+      "name": "¿Enviar Telegram?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.cuerpo }}",
+        "additionalFields": {},
+        "options": {}
+      },
+      "id": "767171d2-561f-4255-a524-ae16683878e5",
+      "name": "Enviar Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1100, 180],
+      "credentials": {
+        "telegramApi": {
+          "id": "41b9b9f9-5503-483c-87db-55e30870d0f8",
+          "name": "Telegram - Paso Firme"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// No habia chat_id de Telegram: no se intenta enviar nada por Telegram.\nconst original = $('Preparar envio').first().json ?? {};\nreturn [{ json: { ...original, telegram_enviado: false, telegram_error: 'No hay chat_id de destino' } }];\n"
+      },
+      "id": "769bf616-93c4-4288-850d-b6d5b164fdc3",
+      "name": "No hay Telegram",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 420]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Resultado final de la notificacion. El flujo NUNCA falla aqui:\n// si un canal falla, se dice cual y se sigue.\nconst original = $('Preparar envio').first().json ?? {};\nconst conEmail = $('Anotar email').first().json ?? {};\nconst actual = $input.first().json ?? {};\n\nlet telegram_enviado;\nlet telegram_error;\nif (typeof actual.telegram_enviado === 'boolean') {\n  telegram_enviado = actual.telegram_enviado;\n  telegram_error = actual.telegram_error ?? null;\n} else {\n  const error = actual.error ?? null;\n  telegram_enviado = !error;\n  telegram_error = error ? String(error) : null;\n}\n\nconst email_enviado = Boolean(conEmail.email_enviado);\nconst email_error = conEmail.email_error ?? null;\n\nreturn [{\n  json: {\n    enviado: email_enviado || telegram_enviado,\n    email_enviado,\n    email_error,\n    telegram_enviado,\n    telegram_error,\n    canal: original.canal ?? null,\n    destinatario: original.email || original.chat_id || null,\n    asunto: original.asunto ?? null,\n  },\n}];\n"
+      },
+      "id": "7bf4cc35-bdde-479c-97bf-d1b9e3b88feb",
+      "name": "Resultado del envio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    }
+  ],
+  "connections": {
+    "Cuando lo llama otro flujo": {
+      "main": [
+        [
+          {
+            "node": "Preparar envio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar envio": {
+      "main": [
+        [
+          {
+            "node": "¿Enviar email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Enviar email?": {
+      "main": [
+        [
+          {
+            "node": "Enviar email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No hay email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar email": {
+      "main": [
+        [
+          {
+            "node": "Anotar email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No hay email": {
+      "main": [
+        [
+          {
+            "node": "Anotar email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anotar email": {
+      "main": [
+        [
+          {
+            "node": "¿Enviar Telegram?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Enviar Telegram?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No hay Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Telegram": {
+      "main": [
+        [
+          {
+            "node": "Resultado del envio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No hay Telegram": {
+      "main": [
+        [
+          {
+            "node": "Resultado del envio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}
