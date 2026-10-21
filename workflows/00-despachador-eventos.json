@@ -1,0 +1,351 @@
+{
+  "name": "00 · Despachador de eventos",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tienda",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "ec6005d7-9628-4611-bf43-d3317e766ab7",
+      "name": "Webhook eventos",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -300,
+        300
+      ],
+      "webhookId": "78703c34-3638-4e48-9d1c-06ad5fde403a",
+      "notes": "Unico webhook del proyecto: la app avisa aqui y este flujo reparte con un Switch."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// La app manda {evento, datos} en el cuerpo del POST. En n8n el cuerpo llega en $json.body.\n// Se deja siempre la misma forma {evento, datos} para que los subflujos no tengan que\n// distinguishable de donde viene el aviso.\nconst cuerpo = $input.first().json?.body ?? $input.first().json ?? {};\nconst evento = String(cuerpo.evento ?? '').trim();\nconst datos = cuerpo.datos ?? {};\n\nreturn [{ json: { evento, datos } }];\n"
+      },
+      "id": "418e11f0-25c9-4427-906b-718c74ac0c38",
+      "name": "Normalizar evento",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "87dd1467-aa66-40b2-b4fb-8d3c9ede3daf",
+                    "leftValue": "={{ $json.evento }}",
+                    "rightValue": "apartado.creado",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Apartado creado"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "0c27bf49-091c-470d-95d1-7f8627c3ee3f",
+                    "leftValue": "={{ $json.evento }}",
+                    "rightValue": "abono.registrado",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Abono registrado"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "bb19136f-3060-45f4-b80a-ea9cc07caec6",
+                    "leftValue": "={{ $json.evento }}",
+                    "rightValue": "venta.registrada",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Venta registrada"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "fe403304-f373-40d3-b782-bf0c2af377cd",
+                    "leftValue": "={{ $json.evento }}",
+                    "rightValue": "apartado.vencido",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Apartado vencido"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Evento desconocido"
+        }
+      },
+      "id": "6bd47cdf-9256-4e6c-8f17-3c20f0e5e3dc",
+      "name": "Switch evento",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        160,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "ZP4v9MXLHdmjwzeS",
+          "mode": "list",
+          "cachedResultName": "01 · Confirmación de apartado"
+        },
+        "mode": "once",
+        "options": {}
+      },
+      "id": "f7d9bbf4-4213-4878-bb17-762aa4c88ff6",
+      "name": "Confirmacion de apartado",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        440,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "R5iY2531GSrJ86oh",
+          "mode": "list",
+          "cachedResultName": "02 · Recibo de abono"
+        },
+        "mode": "once",
+        "options": {}
+      },
+      "id": "dc0998a7-04fb-4989-99b3-54a57554df02",
+      "name": "Recibo de abono",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        440,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "yQ172QPdLgG6bJlu",
+          "mode": "list",
+          "cachedResultName": "04 · Aviso de venta grande"
+        },
+        "mode": "once",
+        "options": {}
+      },
+      "id": "35e140e9-82b6-468d-b3e6-e87d68517d59",
+      "name": "Aviso de venta grande",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        440,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "ByBfvDU4n4TDZeUe",
+          "mode": "list",
+          "cachedResultName": "SUB · Avisar vale"
+        },
+        "mode": "once",
+        "options": {}
+      },
+      "id": "51e53fd6-713d-4e7b-bc7c-aed7305beee1",
+      "name": "Avisar vale",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        440,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "qiU7wQ7zQlr3HNNp",
+          "mode": "list",
+          "cachedResultName": "SUB · Notificar"
+        },
+        "mode": "once",
+        "options": {}
+      },
+      "id": "e5782571-7536-497a-b5e5-4ffe64643b86",
+      "name": "Avisar evento desconocido",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        440,
+        620
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// La app ha mandado un evento que este flujo no conoce. Se avisa a la tienda\n// por si es un fallo de la app, pero no se rompe nada.\nconst entrada = $input.first().json ?? {};\nconst emailTienda = $vars.EMAIL_MARISA || 'marisa@pasofirme.example';\nconst cuerpo = [\n  'La tienda ha avisado de un evento que no conozco:',\n  '',\n  'Evento: ' + (entrada.evento || '(vacio)'),\n  'Datos: ' + JSON.stringify(entrada.datos ?? {}).slice(0, 500),\n].join('\\n');\n\nreturn [{ json: { canal: 'email', email: emailTienda, asunto: 'Evento desconocido de la tienda', cuerpo } }];\n"
+      },
+      "id": "6116ec4d-e4d3-4c6f-ae64-25d68f6bb446",
+      "name": "Preparar aviso de evento desconocido",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        620
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook eventos": {
+      "main": [
+        [
+          {
+            "node": "Normalizar evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar evento": {
+      "main": [
+        [
+          {
+            "node": "Switch evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch evento": {
+      "main": [
+        [
+          {
+            "node": "Confirmacion de apartado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Recibo de abono",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aviso de venta grande",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Avisar vale",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar aviso de evento desconocido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar aviso de evento desconocido": {
+      "main": [
+        [
+          {
+            "node": "Avisar evento desconocido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}
