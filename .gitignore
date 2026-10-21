@@ -1,0 +1,34 @@
+# Secretos y entorno
+.env
+.env.local
+*.env
+!/.env.example
+
+# Datos de la base de datos
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Node / n8n
+node_modules/
+.n8n/
+*.sqlite-wal
+*.sqlite-shm
+
+# Sistema operativo / editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

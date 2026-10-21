@@ -1,0 +1,13 @@
+fecha,cliente,telefono,modelo,talla,precio,abono,resta,notas
+02/09/2026,Carmen Ruiz,612 345 001,Botín piel marrón,38,89.90,10,79.90,
+02/09/2026,Jorge Martín,612345002,Zapatilla running azul,43,64.50,5,59.50,
+03/09/2026,Lucía Gómez,612 345 003,Sandalia tacón negra,37,45,4,41,"dijo que paga el resto el viernes"
+05/09/2026,carmen ruiz,612 345 001,Botín piel marrón,38,89.90,20,59.90,abono
+7/9/26,Ana Torres,,Mocasín ante,39,72,15€,57,
+10/09/2026,Pedro Sanz,612 345 005,Bota agua niño,31,29.95,5,24.95,
+12/09/2026,Jorge Martín,612345002,Zapatilla running azul,43,64.50,30,29.50,abono
+15/09/2026,Rosa Díaz,612 345 006,Zapato vestir hombre,42,95,50,45,
+20/09/2026,Lucía Gómez,612 345 003,Sandalia tacón negra,37,45,41,0,LIQUIDADO - recogió
+01/10/2026,Miguel Ángel López,612 345 007,Deportiva blanca,44,55,5,50,
+03/10/2026,Ana Torres,,Mocasín ante,39,72,20,37,abono
+06/10/2026,Sofía Navarro,612 345 008,Bailarina roja,36,39.90,10,29.90,

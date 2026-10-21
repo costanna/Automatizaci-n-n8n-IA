@@ -1,0 +1,27 @@
+services:
+  tienda:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - TZ=Europe/Madrid
+      - DB_PATH=/data/tienda.db
+      - API_KEY=${API_KEY}
+      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL}
+      - SEED=${SEED:-1}
+    volumes:
+      - tienda_data:/data
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    ports:
+      - "5678:5678"
+    environment:
+      - TZ=Europe/Madrid
+      - GENERIC_TIMEZONE=Europe/Madrid
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+volumes:
+  tienda_data:
+  n8n_data:
