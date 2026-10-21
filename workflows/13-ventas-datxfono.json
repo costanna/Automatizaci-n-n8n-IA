@@ -195,6 +195,24 @@
         1420,
         300
       ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "datxfono",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "b1000010-0000-4000-8000-000000000010",
+      "name": "Importar a mano",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -620,
+        480
+      ],
+      "webhookId": "b1000011-0000-4000-8000-000000000011",
+      "notes": "Permite lanzar la importacion a mano (por ejemplo, despues de volcar el CSV)."
     }
   ],
   "connections": {
@@ -291,6 +309,17 @@
         [
           {
             "node": "Avisar a la tienda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Importar a mano": {
+      "main": [
+        [
+          {
+            "node": "Fecha de la importacion",
             "type": "main",
             "index": 0
           }

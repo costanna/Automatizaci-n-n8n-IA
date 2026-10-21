@@ -19,6 +19,9 @@ este vocabulario para no inventar conceptos.
 | [`07-informe-mensual.md`](07-informe-mensual.md) | HU-08 · Informe mensual |
 | [`08-error-workflow.md`](08-error-workflow.md) | HU-05 · Avisos de errores |
 | [`10-migracion-excel.md`](10-migracion-excel.md) | HU-10 · Migración del Excel antiguo |
+| [`11-apartados-desde-casa.md`](11-apartados-desde-casa.md) | HU-13 · Apartados desde casa |
+| [`13-ventas-datxfono.md`](13-ventas-datxfono.md) | HU-13 · Ventas del datáfono |
+| [`14-asistente-telegram.md`](14-asistente-telegram.md) | HU-11 y HU-12 · Asistente de Telegram |
 
 ## Plantilla de una spec
 
@@ -56,3 +59,7 @@ este vocabulario para no inventar conceptos.
 | HU-08 | 07 | `07-informe-mensual.json` | `tests/flujo-07/` |
 | HU-09 | 04 | `04-venta-grande.json` | `tests/flujo-04/` |
 | HU-10 | 10 | `10-migracion-excel.json` | `tests/flujo-10/` |
+| HU-11 | 14 | `14-asistente-telegram.json` + `sub-tool-saldo-cliente.json` | `tests/flujo-14/` |
+| HU-12 | 14 | `14-asistente-telegram.json` + `sub-tool-cifras-tienda.json` | `tests/flujo-14/` |
+| HU-13 | 11 y 13 | `11-apartados-desde-casa.json`, `13-ventas-datxfono.json` | `tests/flujo-11/`, `tests/flujo-13/` |
+| HU-14 | 00 y 14 | `00-despachador-eventos.json` (token), `14-asistente-telegram.json` | `docs/rgpd.md` |

@@ -179,6 +179,12 @@ Este proyecto se ha probado con **n8n 2.44**. Estas son las cosas que fallan en 
 | `typeVersion` inventado | El nodo no hace lo que se espera o no se importa | Mirar el nodo real: `dist/nodes/<Nodo>/<Nodo>.node.js` en el contenedor |
 | Un `If` con la salida puesta al revés | Se ejecuta la rama contraria | Revisar `connections`: la salida 0 es *true* y la 1 es *false* |
 | Publicar un flujo que llama a otro | `Cannot publish workflow: ... references workflow ... which is not published` | Publicar primero los subflujos |
+| Un webhook con `Respond to Webhook` | Si un flujo tiene nodos *Respond to Webhook*, **todos** sus webhooks tienen que usar `responseMode: responseNode` | Si no: `Unused Respond to Webhook node found in the workflow` |
+| La URL de un webhook | Los webhooks normales viven en `/webhook/<ruta>` | `http://localhost:5678/webhook/tienda` |
+| Un `If` con dos salidas y un nodo de respuesta | La rama que no lleva el nodo de respuesta se queda colgada | Un nodo *Respond to Webhook* por rama |
+| Un nodo Code que devuelve una lista | Devuelve **un item por elemento** si el nodo siguiente es HTTP | Si no, hace una sola petición |
+| Buscar por teléfono | La búsqueda `q` de la app es un `LIKE`: `600000001` no está en `600 000 001` | Pedir todos los apartados y filtrar por dígitos en un nodo Code |
+| El trigger de formulario de n8n 2.6 | No se deja publicar si el flujo tiene otra cosa mal | Se sustituyó por un webhook GET que sirve el formulario y otro POST que lo recibe |
 
 ## 10. Cómo se trabaja: Spec-Driven Development
 
