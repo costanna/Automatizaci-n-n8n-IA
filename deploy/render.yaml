@@ -1,0 +1,102 @@
+services:
+  # n8n con HTTPS: Render da un certificado https://<servicio>.onrender.com sin
+  # configurar nada (el certificado lo emite Let's Encrypt).
+  - type: web
+    name: paso-firme-n8n
+    runtime: docker
+    dockerfilePath: ./deploy/Dockerfile.n8n
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /healthz
+    autoDeploy: false
+    envVars:
+      - key: WEBHOOK_URL
+        sync: false
+        description: "La URL publica de n8n con https (Render te la da al crear el servicio)"
+      - key: N8N_EDITOR_BASE_URL
+        sync: false
+      - key: N8N_HOST
+        value: paso-firme-n8n.onrender.com
+      - key: N8N_PROTOCOL
+        value: https
+      - key: N8N_PORT
+        value: "10000"
+      - key: N8N_SECURE_COOKIE
+        value: "false"
+      - key: N8N_ENCRYPTION_KEY
+        generateValue: true
+      - key: GENERIC_TIMEZONE
+        value: Europe/Madrid
+      - key: TZ
+        value: Europe/Madrid
+      - key: N8N_DIAGNOSTICS_ENABLED
+        value: "false"
+      - key: N8N_RUNNERS_ENABLED
+        value: "true"
+      - key: DB_TYPE
+        value: postgresdb
+      - key: DB_POSTGRESDB_HOST
+        fromDatabase:
+          name: paso-firme-db
+          property: host
+      - key: DB_POSTGRESDB_PORT
+        fromDatabase:
+          name: paso-firme-db
+          property: port
+      - key: DB_POSTGRESDB_DATABASE
+        fromDatabase:
+          name: paso-firme-db
+          property: database
+      - key: DB_POSTGRESDB_USER
+        fromDatabase:
+          name: paso-firme-db
+          property: user
+      - key: DB_POSTGRESDB_PASSWORD
+        fromDatabase:
+          name: paso-firme-db
+          property: password
+    disk:
+      name: n8n-data
+      mountPath: /home/node/.n8n
+      sizeGB: 1
+
+  - type: db
+    name: paso-firme-db
+    databaseName: n8n
+    user: n8n
+    plan: basic-256mb
+    postgresMajorVersion: "16"
+
+  # Copia de seguridad diaria de los datos de n8n (base de datos y flujos).
+  - type: cron
+    name: paso-firme-backup
+    schedule: "17 3 * * *"
+    runtime: docker
+    dockerfilePath: ./deploy/Dockerfile.backup
+    dockerContext: .
+    envVars:
+      - key: DB_TYPE
+        value: postgresdb
+      - key: DB_POSTGRESDB_HOST
+        fromDatabase:
+          name: paso-firme-db
+          property: host
+      - key: DB_POSTGRESDB_PORT
+        fromDatabase:
+          name: paso-firme-db
+          property: port
+      - key: DB_POSTGRESDB_DATABASE
+        fromDatabase:
+          name: paso-firme-db
+          property: database
+      - key: DB_POSTGRESDB_USER
+        fromDatabase:
+          name: paso-firme-db
+          property: user
+      - key: DB_POSTGRESDB_PASSWORD
+        fromDatabase:
+          name: paso-firme-db
+          property: password
+      - key: N8N_ENCRYPTION_KEY
+        sync: false
+        description: "La MISMA clave que tiene el servicio web: sin ella no se descifran las credenciales"
