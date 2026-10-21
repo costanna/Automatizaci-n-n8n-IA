@@ -1,0 +1,318 @@
+{
+  "name": "05 · Cierre diario",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 23 * * *"
+            }
+          ]
+        }
+      },
+      "id": "c03d7d83-d6ff-4bce-acd0-8af64cab850a",
+      "name": "Cada noche a las 23:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Fecha del cierre en la zona horaria de la tienda (Europe/Madrid).\nconst hoy = new Intl.DateTimeFormat('en-CA', {\n  timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',\n}).format(new Date());\n\nreturn [{ json: { hoy, ayer: hoy } }];\n"
+      },
+      "id": "cb70a1ca-e7e5-45ef-96d3-96dfca6aa02c",
+      "name": "Fecha de hoy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=http://tienda:8000/api/ventas?desde={{ $json.desde }}&hasta={{ $json.hasta }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "945d75ed-12f5-45d7-b7ec-8260cbe03cc1",
+      "name": "Ventas del dia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        60,
+        200
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WsD8qReuVdb5h8sd",
+          "name": "Tienda - API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=http://tienda:8000/api/abonos?desde={{ $json.desde }}&hasta={{ $json.hasta }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "75595a56-8dae-479e-91c8-9aab462f3b53",
+      "name": "Abonos del dia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        60,
+        400
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WsD8qReuVdb5h8sd",
+          "name": "Tienda - API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Calcula el cierre del dia (HU-04).\n//\n// 'Ventas del dia' = ventas directas + abonos cobrados ese dia (los abonos\n// iniciales tambien cuentan: nacen como abono el dia que se crea el apartado).\n// Los importes vienen de la API: aqui solo se SUMAN y se redondea al final.\nconst fecha = $('Fecha de hoy').first().json.hoy;\n\nconst ventas = $('Ventas del dia').all().flatMap((i) => (Array.isArray(i.json) ? i.json : [i.json])).filter((v) => v && v.id !== undefined);\nconst abonos = $('Abonos del dia').all().flatMap((i) => (Array.isArray(i.json) ? i.json : [i.json])).filter((a) => a && a.id !== undefined);\n\nconst FORMAS = ['efectivo', 'tarjeta', 'bizum'];\nconst porForma = { ventas: {}, abonos: {} };\nfor (const forma of FORMAS) { porForma.ventas[forma] = 0; porForma.abonos[forma] = 0; }\n\nlet ventasTotal = 0;\nfor (const v of ventas) {\n  const forma = FORMAS.includes(v.forma_pago) ? v.forma_pago : 'efectivo';\n  const importe = Number(v.importe ?? 0);\n  porForma.ventas[forma] += importe;\n  ventasTotal += importe;\n}\n\nlet abonosTotal = 0;\nfor (const a of abonos) {\n  const forma = FORMAS.includes(a.forma_pago) ? a.forma_pago : 'efectivo';\n  const importe = Number(a.importe ?? 0);\n  porForma.abonos[forma] += importe;\n  abonosTotal += importe;\n}\n\nconst redondear = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;\nfor (const forma of FORMAS) {\n  porForma.ventas[forma] = redondear(porForma.ventas[forma]);\n  porForma.abonos[forma] = redondear(porForma.abonos[forma]);\n}\nventasTotal = redondear(ventasTotal);\nabonosTotal = redondear(abonosTotal);\n\nconst cierre = {\n  fecha,\n  ventas_directas: ventasTotal,\n  abonos: abonosTotal,\n  total: redondear(ventasTotal + abonosTotal),\n  por_forma_pago: porForma,\n  num_ventas: ventas.length,\n  num_abonos: abonos.length,\n  movimientos: ventas.length + abonos.length,\n};\n\n// El historico de cierres se guarda en los datos estaticos del flujo (la memoria de\n// n8n entre ejecuciones): una entrada por dia, siempre la del ultimo cierre.\nconst staticData = $getWorkflowStaticData('global');\nstaticData.cierres = Array.isArray(staticData.cierres) ? staticData.cierres : [];\nstaticData.cierres = staticData.cierres.filter((c) => c.fecha !== cierre.fecha);\nstaticData.cierres.push(cierre);\nstaticData.cierres = staticData.cierres.slice(-120);\n\nreturn [{ json: { cierre, cierresGuardados: staticData.cierres.length } }];\n"
+      },
+      "id": "5800b095-2558-4384-b304-3fbaaa91950a",
+      "name": "Calcular el cierre",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3c70c7ec-2c49-45b2-acdd-62731023a6bd",
+              "leftValue": "={{ $json.cierre.movimientos }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "99d678ab-4cc6-47e6-867e-bdae1a9ab89e",
+      "name": "¿Ha habido movimientos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        780,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Resumen del dia para Marisa (HU-04).\nconst cierre = $input.first().json.cierre;\nconst emailTienda = $vars.EMAIL_MARISA || 'marisa@pasofirme.example';\nconst euros = (n) => Number(n ?? 0).toFixed(2).replace('.', ',') + ' EUR';\nconst escapar = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nconst filas = [];\nfor (const forma of ['efectivo', 'tarjeta', 'bizum']) {\n  filas.push([\n    forma,\n    euros(cierre.por_forma_pago.ventas[forma]),\n    euros(cierre.por_forma_pago.abonos[forma]),\n    euros(cierre.por_forma_pago.ventas[forma] + cierre.por_forma_pago.abonos[forma]),\n  ]);\n}\n\nconst cuerpo = [\n  'Cierre de caja del ' + cierre.fecha + ':',\n  '',\n  'Ventas directas: ' + euros(cierre.ventas_directas) + ' (' + cierre.num_ventas + ' ventas)',\n  'Abonos cobrados: ' + euros(cierre.abonos) + ' (' + cierre.num_abonos + ' abonos)',\n  'Total del dia: ' + euros(cierre.total),\n  '',\n  'Desglose por forma de pago:',\n  '  Efectivo: ' + euros(cierre.por_forma_pago.ventas.efectivo) + ' en ventas + ' + euros(cierre.por_forma_pago.abonos.efectivo) + ' en abonos',\n  '  Tarjeta: ' + euros(cierre.por_forma_pago.ventas.tarjeta) + ' en ventas + ' + euros(cierre.por_forma_pago.abonos.tarjeta) + ' en abonos',\n  '  Bizum: ' + euros(cierre.por_forma_pago.ventas.bizum) + ' en ventas + ' + euros(cierre.por_forma_pago.abonos.bizum) + ' en abonos',\n].join('\\n');\n\nconst tabla = '<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\"><tr><th>Forma</th><th>Ventas</th><th>Abonos</th><th>Total</th></tr>'\n  + filas.map((f) => '<tr><td>' + f[0] + '</td><td>' + f[1] + '</td><td>' + f[2] + '</td><td>' + f[3] + '</td></tr>').join('')\n  + '</table>';\n\nreturn [{\n  json: {\n    canal: 'email',\n    email: emailTienda,\n    asunto: 'Cierre de caja · ' + cierre.fecha,\n    cuerpo,\n    cuerpo_html: '<p>' + escapar(cuerpo).replace(/\\n/g, '<br>') + '</p>' + tabla,\n  },\n}];\n"
+      },
+      "id": "7967e352-269f-4ce8-b6ef-5b5acf1a7b33",
+      "name": "Preparar resumen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Dia sin movimientos: el flujo lo dice, no falla.\nconst cierre = $input.first().json.cierre;\nconst emailTienda = $vars.EMAIL_MARISA || 'marisa@pasofirme.example';\nconst escapar = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nconst cuerpo = [\n  'Cierre de caja del ' + cierre.fecha + ':',\n  '',\n  'Hoy no ha habido movimientos: ni ventas ni abonos.',\n  'Total del dia: 0,00 EUR',\n].join('\\n');\n\nreturn [{\n  json: {\n    canal: 'email',\n    email: emailTienda,\n    asunto: 'Cierre de caja · ' + cierre.fecha,\n    cuerpo,\n    cuerpo_html: '<p>' + escapar(cuerpo).replace(/\\n/g, '<br>') + '</p>',\n  },\n}];\n"
+      },
+      "id": "323c0b57-7c1f-4c8d-9907-70f886b9c3b5",
+      "name": "Preparar resumen sin movimientos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "qiU7wQ7zQlr3HNNp",
+          "mode": "list",
+          "cachedResultName": "SUB · Notificar"
+        },
+        "mode": "once",
+        "options": {}
+      },
+      "id": "76c21f3c-447e-4ab7-8dde-c18dc5bd1c0a",
+      "name": "Notificar",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        1280,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Devuelve UN solo item con los datos de la consulta: el nodo HTTP que va despues\n// hace una sola peticion, en vez de una por cada item que le llega.\nconst origen = $('Fecha de hoy').first().json;\nreturn [{ json: { desde: origen.hoy, hasta: origen.hoy } }];"
+      },
+      "id": "aaaa1111-1111-4111-8111-111111111111",
+      "name": "Preparar la consulta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Cada noche a las 23:00": {
+      "main": [
+        [
+          {
+            "node": "Fecha de hoy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fecha de hoy": {
+      "main": [
+        [
+          {
+            "node": "Ventas del dia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Abonos del dia": {
+      "main": [
+        [
+          {
+            "node": "Calcular el cierre",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular el cierre": {
+      "main": [
+        [
+          {
+            "node": "¿Ha habido movimientos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Ha habido movimientos?": {
+      "main": [
+        [
+          {
+            "node": "Preparar resumen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar resumen sin movimientos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar resumen": {
+      "main": [
+        [
+          {
+            "node": "Notificar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar resumen sin movimientos": {
+      "main": [
+        [
+          {
+            "node": "Notificar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ventas del dia": {
+      "main": [
+        [
+          {
+            "node": "Preparar la consulta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar la consulta": {
+      "main": [
+        [
+          {
+            "node": "Abonos del dia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}
