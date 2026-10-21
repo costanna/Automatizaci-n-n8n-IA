@@ -4,7 +4,35 @@ Todas las novedades del proyecto. El formato sigue
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el versionado es
 [SemVer](https://semver.org/lang/es/).
 
+## [1.4.0] - 2026-10-21
+
+### Añadido
+
+- \scripts/telegram_mock.py\: un servidor que habla como la API de Telegram (recibe los
+  updates, se los pasa a n8n y guarda lo que responde el bot). Sirve para probar el
+  asistente sin un bot de verdad.
+- \scripts/conectar_bot_telegram.sh\: registra el webhook de n8n en un bot de Telegram
+  (\setWebhook\) con el token secreto.
+
+### Corregido
+
+- **El bot de Telegram funciona de verdad**: el trigger de Telegram de n8n 2.44 no se activaba,
+  así que el flujo ahora usa un webhook normal que recibe los updates con la cabecera
+  \X-Telegram-Bot-Api-Secret-Token\ (lo que manda Telegram). Se probó con los cinco mensajes
+  del caso: pedir el teléfono, recibir el saldo, preguntar por la fecha límite y las dos
+  consultas de la tienda.
+- **Las cifras del bot las pone la tienda, no el modelo**: el nodo de comprobación ahora lee
+  las cifras del nodo que las preparó (el item del modelo solo trae su texto). Se ha visto como
+  el modelo redondeaba \9,50 EUR\ a \9,5 €\ y ahora la respuesta se sustituye por la
+  calculada.
+- La URL base del modelo de lenguaje sale de la credencial (en n8n 2.x el nodo ya no la
+  deja poner) y el parámetro \model\ es un resource locator.
+- El nodo de Telegram usa \operation: sendMessage\ (con \send\ la URL salía incompleta).
+- La configuración de los flujos no depende de \$vars\ ni de \$env\ (bloqueados en la
+  edición comunitaria).
+
 ## [1.3.1] - 2026-10-21
+
 
 ### Añadido
 

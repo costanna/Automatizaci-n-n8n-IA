@@ -51,6 +51,7 @@ credencial:
 | `Buscar apartados activos`, `Registrar abono`, `Ventas del dia`, `Apartados activos`, `Vencer apartado`, `Ventas del mes`, `Abonos del mes`, `Apartados`, `Vales`, `Crear apartado`, `Crear abono`, `Ver el estado de la tienda`, `Buscar apartados existentes` | `Tienda - API` (Header Auth) |
 | `Enviar email` | `SMTP - Paso Firme` |
 | `Enviar Telegram` | `Telegram - Paso Firme` |
+| `Telegram Trigger` | `Telegram - Token del bot` (Header Auth) |
 | `Correo del banco` | `Banco - IMAP` |
 | `Modelo de lenguaje` | `Modelo - Groq` |
 
@@ -81,16 +82,60 @@ llama a otro que no esté publicado.
 
 ## 4 bis. El bot de Telegram (flujo 14)
 
-1. Habla con [@BotFather](https://t.me/BotFather) en Telegram y crea un bot: te da un token
-   (parecido a `123456789:AAH...`).
-2. En n8n, edita la credencial `Telegram - Paso Firme` y pega ese token.
-3. En `data/config.csv`, pon tu chat id en `TELEGRAM_ADMIN_ID` (solo tú debes poder preguntar
-   por las cifras de la tienda). Para saber tu chat id, escribe cualquier cosa al bot y míralo en
-   *Executions* → el nodo *Telegram Trigger* → `message.chat.id`.
-4. Publica el flujo y habla con el bot.
+### Cómo funciona
 
-Sin la credencial, el flujo se publica pero no recibe mensajes; el resto de flujos no se ven
-afectados.
+El bot recibe los updates de Telegram en el webhook `POST /webhook/telegram` de n8n, con la
+cabecera `X-Telegram-Bot-Api-Secret-Token` (es lo que manda Telegram y lo que comprueba n8n).
+Por eso el nodo del flujo se llama "Telegram Trigger" pero es un webhook normal: el trigger de
+Telegram de n8n 2.44 no se activa en este entorno.
+
+### Probarlo sin un bot de verdad
+
+Hay un **mock de la API de Telegram** (`scripts/telegram_mock.py`) que habla como Telegram:
+recibe los updates, se los pasa a n8n y guarda las respuestas que el bot envía.
+
+```bash
+# 1. el mock, diciendo a donde entrega los updates y con que token
+python scripts/telegram_mock.py --puerto 8081 \
+    --url http://localhost:5678/webhook/telegram \
+    --secreto paso-firme-token-bot-2026
+
+# 2. la credencial 'Telegram - Paso Firme' del bot, con la URL del mock
+#    (en n8n: Credentials -> Telegram - Paso Firme -> Base URL = http://host.docker.internal:8081)
+
+# 3. encolar mensajes como si los escribiera un cliente
+curl -X POST http://localhost:8081/_inyectar -H "Content-Type: application/json" \
+     -d '{"chat_id":"111111","text":"¿cuánto me falta?","first_name":"Ana"}'
+
+# 4. ver lo que ha respondido
+curl http://localhost:8081/_enviados
+```
+
+### Conectar un bot de verdad
+
+1. Habla con [@BotFather](https://t.me/BotFather) y crea un bot: te da un token
+   (parecido a `123456789:AAH...`).
+2. En n8n, edita la credencial `Telegram - Paso Firme`:
+   - **Access Token**: el del bot.
+   - **Base URL**: `https://api.telegram.org` (el valor por defecto).
+3. En `data/config.csv`:
+   - `TELEGRAM_SECRET_TOKEN`: un texto largo y aleatorio (es el que viaja en la cabecera).
+   - `TELEGRAM_ADMIN_ID`: tu chat id de Telegram (solo tú puedes preguntar por las cifras de la
+     tienda). Para saberlo, escribe al bot y míralo en *Executions* → `message.chat.id`.
+4. En n8n, crea la credencial `Telegram - Token del bot` (Header Auth):
+   - **Name**: `X-Telegram-Bot-Api-Secret-Token`
+   - **Value**: el mismo `TELEGRAM_SECRET_TOKEN`.
+5. Registra el webhook en Telegram:
+
+   ```bash
+   scripts/conectar_bot_telegram.sh <token-del-bot> \
+       https://tu-n8n.onrender.com/webhook/telegram <el TELEGRAM_SECRET_TOKEN>
+   ```
+
+6. Publica el flujo `14 · Asistente de Telegram` y escribe al bot.
+
+> Sin el token secreto en la credencial, n8n rechaza los updates con un 403 (lo mismo que
+> hace Telegram si el token no cuadra).
 
 ## 5. Probar
 

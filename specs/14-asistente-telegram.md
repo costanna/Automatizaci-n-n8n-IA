@@ -5,7 +5,7 @@
 | **Flujo** | `workflows/14-asistente-telegram.json` |
 | **Herramientas** | `SUB · Tool saldo del cliente`, `SUB · Tool cifras de la tienda` |
 | **Historias** | HU-11 y HU-12 🟠 |
-| **Disparador** | Telegram Trigger (mensajes del bot) |
+| **Disparador** | Webhook `POST /webhook/telegram` con la cabecera `X-Telegram-Bot-Api-Secret-Token`: es lo que Telegram manda (el trigger de Telegram de n8n 2.44 no se activa en este entorno) |
 | **Configuración** | `TELEGRAM_ADMIN_ID` en `data/config.csv`: el chat de la tienda |
 
 ## Objetivo
@@ -38,7 +38,7 @@ Un mensaje de Telegram:
 
 ## Pasos
 
-1. **Telegram Trigger**.
+1. **Telegram Trigger** (webhook con token): recibe el update de Telegram.
 2. **Leer configuración** + **Parsear configuración** (`data/config.csv`).
 3. **Normalizar el mensaje** (Code): chat, texto y nombre; si el chat es `TELEGRAM_ADMIN_ID` es
    la tienda. Mira si el chat ya está apuntado a un teléfono (en los *static data* del flujo) y,
