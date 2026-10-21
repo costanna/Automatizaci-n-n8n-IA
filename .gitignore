@@ -26,6 +26,9 @@ node_modules/
 *.sqlite-wal
 *.sqlite-shm
 
+# Correos que envia el SMTP de desarrollo (son datos de prueba, no se versionan)
+data/envios/
+
 # Sistema operativo / editores
 .DS_Store
 Thumbs.db
