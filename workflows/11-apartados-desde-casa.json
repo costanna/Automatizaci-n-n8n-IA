@@ -1,0 +1,685 @@
+{
+  "name": "11 · Apartados desde casa",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "confirmar-solicitud",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1000002-0000-4000-8000-000000000002",
+      "name": "Confirmar solicitud",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -700,
+        480
+      ],
+      "notes": "La tienda confirma la solicitud cuando llega el abono inicial."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// El flujo tiene dos entradas POST:\n//   - POST /apartar-zapatos      : el cliente envia la solicitud\n//   - POST /confirmar-solicitud : la tienda confirma cuando llega el abono inicial\nconst entrada = $input.first().json ?? {};\nconst cuerpo = entrada.body ?? {};\nconst codigo = String(cuerpo.codigo ?? cuerpo.codigo_solicitud ?? '').trim();\n\nreturn [{\n  json: {\n    ...entrada,\n    camino: codigo ? 'confirmar' : 'solicitud',\n    datos: cuerpo,\n    codigo,\n  },\n}];"
+      },
+      "id": "a1000003-0000-4000-8000-000000000003",
+      "name": "Enrutar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Busca la solicitud por su codigo. Si no existe o ya estaba confirmada, no hay\n// nada que hacer (para no crear dos veces el mismo apartado).\nconst entrada = $input.first().json ?? {};\nconst codigo = String(entrada.codigo ?? '').trim();\n\nconst staticData = $getWorkflowStaticData('global');\nstaticData.solicitudes = staticData.solicitudes ?? {};\nconst solicitud = staticData.solicitudes[codigo] ?? null;\n\nconst pendiente = Boolean(solicitud) && solicitud.estado === 'pendiente';\n\nreturn [{\n  json: {\n    ...entrada,\n    solicitud: pendiente ? solicitud : null,\n    encontrada: Boolean(solicitud),\n    pendiente,\n  },\n}];"
+      },
+      "id": "a1000005-0000-4000-8000-000000000005",
+      "name": "Buscar la solicitud",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -20,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a1000006-0000-4000-8000-000000000006",
+              "leftValue": "={{ $json.pendiente }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1000006-0000-4000-8000-000000000006",
+      "name": "¿Esta pendiente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        200,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Crea el apartado en la app, con la fecha original y el abono inicial recibido.\nconst entrada = $input.first().json ?? {};\nconst s = entrada.solicitud ?? {};\n// El importe llega en el cuerpo del webhook de confirmacion.\nconst importe = Number(entrada.datos?.importe ?? entrada.importe ?? entrada.abono_inicial ?? 0);\n\nreturn [{\n  json: {\n    ...entrada,\n    importe: Number.isFinite(importe) ? importe : 0,\n    apartado: {\n      cliente: s.cliente,\n      telefono: s.telefono,\n      email: s.email,\n      producto: s.producto,\n      talla: s.talla,\n      precio: s.precio,\n      abono_inicial: Number.isFinite(importe) ? importe : 0,\n      forma_pago: s.forma_pago ?? 'bizum',\n      fecha: s.fecha,\n    },\n  },\n}];"
+      },
+      "id": "a1000007-0000-4000-8000-000000000007",
+      "name": "Preparar el apartado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://tienda:8000/api/apartados",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.apartado) }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1000008-0000-4000-8000-000000000008",
+      "name": "Crear el apartado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        640,
+        100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WsD8qReuVdb5h8sd",
+          "name": "Tienda - API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Marca la solicitud como confirmada y avisa al cliente y a la tienda.\nconst entrada = $input.first().json ?? {};\nconst creado = entrada;\nconst solicitud = entrada.solicitud ?? {};\nconst codigo = String(solicitud.codigo ?? entrada.codigo ?? '');\n\nconst staticData = $getWorkflowStaticData('global');\nstaticData.solicitudes = staticData.solicitudes ?? {};\nif (staticData.solicitudes[codigo]) {\n  staticData.solicitudes[codigo].estado = 'confirmada';\n  staticData.solicitudes[codigo].apartado_id = creado.id ?? null;\n}\n\nconst euros = (n) => Number(n ?? 0).toFixed(2).replace('.', ',') + ' EUR';\n\nconst cuerpoCliente = [\n  'Hola ' + (solicitud.cliente ?? '') + ',',\n  '',\n  'Tu apartado de ' + (solicitud.producto ?? '') + (solicitud.talla ? ' · talla ' + solicitud.talla : '') + ' esta confirmado.',\n  '',\n  'Abonado: ' + euros(entrada.importe),\n  'Te queda por pagar: ' + euros((creado.precio ?? 0) - (entrada.importe ?? 0)),\n  'Fecha limite: ' + (creado.fecha_limite ?? ''),\n  '',\n  'Cuando quieras puedes pasar por la tienda a pagar el resto.',\n  '',\n  'Zapateria Paso Firme',\n].join('\\n');\n\nconst cuerpoTienda = [\n  'Apartado confirmado: ' + (solicitud.producto ?? '') + ' de ' + (solicitud.cliente ?? '') + '.',\n  'Abono inicial: ' + euros(entrada.importe),\n  'Codigo de la solicitud: ' + codigo,\n].join('\\n');\n\nreturn [{\n  json: {\n    ...entrada,\n    cuerpo_cliente: cuerpoCliente,\n    cuerpo_tienda: cuerpoTienda,\n  },\n}];"
+      },
+      "id": "a1000009-0000-4000-8000-000000000009",
+      "name": "Avisos de la confirmacion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        860,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Aviso a la tienda: la solicitud no existe o ya estaba confirmada.\nconst entrada = $input.first().json ?? {};\nconst codigo = String(entrada.codigo ?? '');\nconst cuerpo = [\n  'No se ha podido confirmar la solicitud ' + (codigo || '(sin codigo)') + '.',\n  entrada.encontrada ? 'Ya estaba confirmada antes.' : 'No existe ninguna solicitud con ese codigo.',\n].join('\\n');\n\nreturn [{ json: { ...entrada, cuerpo_tienda: cuerpo, cuerpo_cliente: '' } }];"
+      },
+      "id": "a100000a-0000-4000-8000-00000000000a",
+      "name": "Aviso de solicitud no valida",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Crea la solicitud de apartado: el cliente ha pedido apartar unos zapatos desde\n// casa, pero todavia no ha pagado el abono inicial.\n//\n// La solicitud se guarda en los datos estaticos del flujo (la memoria de n8n entre\n// ejecuciones) con un codigo para que la tienda pueda confirmarla.\nconst entrada = $input.first().json ?? {};\nconst datos = entrada.datos ?? entrada;\n\nconst euros = (n) => Number(n ?? 0).toFixed(2).replace('.', ',') + ' EUR';\nconst precio = Number(String(datos.precio ?? '').replace(',', '.'));\nconst digitos = (s) => String(s ?? '').replace(/[^0-9]/g, '');\n\nconst staticData = $getWorkflowStaticData('global');\nstaticData.solicitudes = staticData.solicitudes ?? {};\nstaticData.contador = (staticData.contador ?? 0) + 1;\n\nconst codigo = 'SOL-' + String(staticData.contador).padStart(4, '0');\nconst solicitud = {\n  codigo,\n  cliente: String(datos.cliente ?? '').trim(),\n  telefono: digitos(datos.telefono),\n  email: String(datos.email ?? '').trim(),\n  producto: String(datos.producto ?? '').trim(),\n  talla: String(datos.talla ?? '').trim(),\n  precio: Number.isFinite(precio) ? precio : 0,\n  forma_pago: String(datos.forma_pago ?? 'bizum').trim().toLowerCase(),\n  fecha: new Intl.DateTimeFormat('en-CA', {\n    timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',\n  }).format(new Date()),\n  estado: 'pendiente',\n};\n\nstaticData.solicitudes[codigo] = solicitud;\n\nconst cuerpo = [\n  'Un cliente quiere apartar unos zapatos desde casa:',\n  '',\n  'Codigo de la solicitud: ' + codigo,\n  'Cliente: ' + (solicitud.cliente || '(sin nombre)'),\n  'Telefono: ' + (solicitud.telefono || '(sin telefono)'),\n  'Correo: ' + (solicitud.email || '(sin correo)'),\n  'Producto: ' + solicitud.producto + (solicitud.talla ? ' · talla ' + solicitud.talla : ''),\n  'Precio: ' + euros(solicitud.precio),\n  'Paga con: ' + solicitud.forma_pago,\n  '',\n  'Cuando llegue el abono inicial, confirma la solicitud con:',\n  'POST /webhook/confirmar-solicitud  { \"codigo\": \"' + codigo + '\", \"importe\": 10 }',\n  '',\n  'El apartado NO se ha creado todavia: solo es una solicitud.',\n].join('\\n');\n\nreturn [{\n  json: {\n    ...entrada,\n    solicitud,\n    codigo,\n    cuerpo,\n  },\n}];"
+      },
+      "id": "a100000b-0000-4000-8000-00000000000b",
+      "name": "Preparar la solicitud",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -20,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Mensaje para la tienda con la solicitud nueva.\nconst entrada = $input.first().json ?? {};\nreturn [{ json: { ...entrada, cuerpo: entrada.cuerpo ?? '' } }];"
+      },
+      "id": "a100000c-0000-4000-8000-00000000000c",
+      "name": "Mensaje para la tienda",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "qiU7wQ7zQlr3HNNp",
+          "mode": "list",
+          "cachedResultName": "SUB · Notificar"
+        },
+        "mode": "once",
+        "options": {}
+      },
+      "id": "a100000d-0000-4000-8000-00000000000d",
+      "name": "Avisar a la tienda",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        640,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Mensaje para el cliente: el apartado ya esta confirmado.\nconst entrada = $input.first().json ?? {};\nreturn [{ json: { ...entrada, cuerpo: entrada.cuerpo_cliente ?? '' } }];"
+      },
+      "id": "a100000e-0000-4000-8000-00000000000e",
+      "name": "Mensaje para el cliente",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "qiU7wQ7zQlr3HNNp",
+          "mode": "list",
+          "cachedResultName": "SUB · Notificar"
+        },
+        "mode": "once",
+        "options": {}
+      },
+      "id": "a100000f-0000-4000-8000-00000000000f",
+      "name": "Avisar al cliente",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        1300,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "qiU7wQ7zQlr3HNNp",
+          "mode": "list",
+          "cachedResultName": "SUB · Notificar"
+        },
+        "mode": "once",
+        "options": {}
+      },
+      "id": "a1000010-0000-4000-8000-000000000010",
+      "name": "Avisar a la tienda (confirmacion)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        860,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "apartar-zapatos",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1000020-0000-4000-8000-000000000020",
+      "name": "Ver el formulario",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -900,
+        100
+      ],
+      "webhookId": "a1000021-0000-4000-8000-000000000021",
+      "notes": "El cliente abre el formulario para pedir un apartado desde casa."
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "apartar-zapatos",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1000022-0000-4000-8000-000000000022",
+      "name": "Enviar la solicitud",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -900,
+        300
+      ],
+      "webhookId": "a1000023-0000-4000-8000-000000000023",
+      "notes": "El cliente envia los datos del apartado que quiere."
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=<html>\n<!doctype html>\n<html lang=\"es\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>Apartar unos zapatos · Paso Firme</title>\n<style>\n  body { font-family: system-ui, sans-serif; margin: 0; background: #f6f4f1; color: #26221e; }\n  main { max-width: 460px; margin: 3rem auto; padding: 2rem; background: #fff; border-radius: 12px;\n         box-shadow: 0 6px 24px rgba(0,0,0,.08); }\n  h1 { font-size: 1.4rem; margin-top: 0; }\n  label { display: block; margin: 1rem 0 .25rem; font-weight: 600; font-size: .9rem; }\n  input { width: 100%; padding: .6rem .7rem; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }\n  button { margin-top: 1.4rem; width: 100%; padding: .8rem; font-size: 1rem; border: 0; border-radius: 8px;\n           background: #2f6f4f; color: #fff; cursor: pointer; }\n  .nota { font-size: .85rem; color: #666; margin-top: 1rem; }\n  .error { color: #a33; margin-top: 1rem; }\n</style>\n</head>\n<body>\n<main>\n  <h1>Apartar unos zapatos</h1>\n  <p>Rellena estos datos. El apartado se confirma cuando llegue el abono inicial.</p>\n  <form id=\"form\">\n    <label for=\"cliente\">Tu nombre</label>\n    <input id=\"cliente\" name=\"cliente\" required>\n    <label for=\"telefono\">Tu teléfono (9 dígitos)</label>\n    <input id=\"telefono\" name=\"telefono\" required>\n    <label for=\"email\">Tu correo</label>\n    <input id=\"email\" name=\"email\" type=\"email\">\n    <label for=\"producto\">Qué quieres apartar</label>\n    <input id=\"producto\" name=\"producto\" required>\n    <label for=\"talla\">Talla</label>\n    <input id=\"talla\" name=\"talla\">\n    <label for=\"precio\">Precio en euros</label>\n    <input id=\"precio\" name=\"precio\" type=\"number\" step=\"0.01\" required>\n    <label for=\"forma_pago\">Cómo vas a pagar</label>\n    <input id=\"forma_pago\" name=\"forma_pago\" value=\"bizum\">\n    <button type=\"submit\">Enviar la solicitud</button>\n  </form>\n  <p class=\"nota\">La tienda te avisa cuando llegue el abono inicial.</p>\n  <p class=\"error\" id=\"error\" hidden></p>\n</main>\n<script>\n  document.getElementById('form').addEventListener('submit', async (evento) => {\n    evento.preventDefault();\n    const datos = Object.fromEntries(new FormData(evento.target).entries());\n    try {\n      const r = await fetch(location.pathname, {\n        method: 'POST',\n        headers: { 'Content-Type': 'application/json' },\n        body: JSON.stringify(datos),\n      });\n      const texto = await r.text();\n      document.querySelector('main').innerHTML = '<h1>Gracias</h1><p>' + texto + '</p>';\n    } catch (e) {\n      const aviso = document.getElementById('error');\n      aviso.hidden = false;\n      aviso.textContent = 'No se ha podido enviar. Llama a la tienda.';\n    }\n  });\n</script>\n</body>\n</html>\n</html>",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "a1000024-0000-4000-8000-000000000024",
+      "name": "Mostrar el formulario",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -700,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=Gracias, hemos recibido tu solicitud. La tienda te avisa en cuanto llegue el abono inicial.",
+        "options": {}
+      },
+      "id": "a1000025-0000-4000-8000-000000000025",
+      "name": "Responder gracias",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        420,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a1000026-0000-4000-8000-000000000026",
+              "leftValue": "={{ $json.camino }}",
+              "rightValue": "formulario",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1000026-0000-4000-8000-000000000026",
+      "name": "¿Es el formulario?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        -20,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a1000027-0000-4000-8000-000000000027",
+              "leftValue": "={{ $json.camino }}",
+              "rightValue": "confirmar",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1000027-0000-4000-8000-000000000027",
+      "name": "¿Es una confirmacion?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        -240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=Solicitud confirmada: apartado creado.",
+        "options": {}
+      },
+      "id": "a1000030-0000-4000-8000-000000000030",
+      "name": "Responder confirmado",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1520,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=No se ha podido confirmar la solicitud.",
+        "options": {}
+      },
+      "id": "a1000031-0000-4000-8000-000000000031",
+      "name": "Responder no valida",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1080,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Esta entrada es el GET del formulario: solo hay que enseñarlo.\nconst entrada = $input.first().json ?? {};\nreturn [{ json: { ...entrada, camino: 'formulario', datos: {}, codigo: '' } }];"
+      },
+      "id": "a1000032-0000-4000-8000-000000000032",
+      "name": "Enrutar el formulario",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -460,
+        100
+      ]
+    }
+  ],
+  "connections": {
+    "Confirmar solicitud": {
+      "main": [
+        [
+          {
+            "node": "Enrutar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrutar": {
+      "main": [
+        [
+          {
+            "node": "¿Es una confirmacion?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es una confirmacion?": {
+      "main": [
+        [
+          {
+            "node": "Buscar la solicitud",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar la solicitud",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar la solicitud": {
+      "main": [
+        [
+          {
+            "node": "¿Esta pendiente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Esta pendiente?": {
+      "main": [
+        [
+          {
+            "node": "Preparar el apartado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aviso de solicitud no valida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar el apartado": {
+      "main": [
+        [
+          {
+            "node": "Crear el apartado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear el apartado": {
+      "main": [
+        [
+          {
+            "node": "Avisos de la confirmacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avisos de la confirmacion": {
+      "main": [
+        [
+          {
+            "node": "Mensaje para el cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensaje para el cliente": {
+      "main": [
+        [
+          {
+            "node": "Avisar al cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aviso de solicitud no valida": {
+      "main": [
+        [
+          {
+            "node": "Avisar a la tienda (confirmacion)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar la solicitud": {
+      "main": [
+        [
+          {
+            "node": "Mensaje para la tienda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensaje para la tienda": {
+      "main": [
+        [
+          {
+            "node": "Avisar a la tienda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ver el formulario": {
+      "main": [
+        [
+          {
+            "node": "Enrutar el formulario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar la solicitud": {
+      "main": [
+        [
+          {
+            "node": "Enrutar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avisar a la tienda": {
+      "main": [
+        [
+          {
+            "node": "Responder gracias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avisar al cliente": {
+      "main": [
+        [
+          {
+            "node": "Responder confirmado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avisar a la tienda (confirmacion)": {
+      "main": [
+        [
+          {
+            "node": "Responder no valida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrutar el formulario": {
+      "main": [
+        [
+          {
+            "node": "¿Es el formulario?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es el formulario?": {
+      "main": [
+        [
+          {
+            "node": "Mostrar el formulario",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "¿Es una confirmacion?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}
