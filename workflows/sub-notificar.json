@@ -9,18 +9,24 @@
       "name": "Cuando lo llama otro flujo",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.3,
-      "position": [-280, 300]
+      "position": [
+        -280,
+        300
+      ]
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Normaliza la notificacion que pide el flujo que llama.\n// Aqui no se calcula ninguna cifra: el texto y los importes los pone el flujo que llama\n// (que los ha copiado de la API de la tienda). Este subflujo solo se encarga de enviarlo.\nconst entrada = $input.first().json ?? {};\n\nconst cuerpoTexto = String(entrada.cuerpo ?? '').trim();\nconst cuerpoHtml = entrada.cuerpo_html\n  ? String(entrada.cuerpo_html)\n  : '<p>' + cuerpoTexto.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\\n/g, '<br>') + '</p>';\n\nconst canal = String(entrada.canal ?? 'email').toLowerCase();\nconst chatId = String(entrada.chat_id ?? '').trim();\n\nreturn [{\n  json: {\n    canal,\n    enviar_email: (canal === 'email' || canal === 'ambos') && Boolean(String(entrada.email ?? '').trim()),\n    // Sin chat_id no hay a quien mandar el Telegram: se salta en silencio.\n    enviar_telegram: (canal === 'telegram' || canal === 'ambos') && Boolean(chatId),\n    email: String(entrada.email ?? entrada.destinatario ?? '').trim(),\n    chat_id: chatId,\n    asunto: String(entrada.asunto ?? 'Aviso · Paso Firme'),\n    cuerpo: cuerpoTexto,\n    cuerpo_html: cuerpoHtml,\n  },\n}];\n"
+        "jsCode": "// Normaliza la notificacion que pide el flujo que llama.\n// Aqui no se calcula ninguna cifra: el texto y los importes los pone el flujo que llama\n// (que los ha copiado de la API de la tienda). Este subflujo solo se encarga de enviarlo.\n// Lee la configuracion de data/config.csv (clave,valor).\n// Vive en un fichero y no en el flujo: se cambia sin tocar el flujo.\nconst config = {};\nfor (const item of $('Parsear configuracion').all()) {\n  const clave = String(item.json?.clave ?? '').trim();\n  const valor = String(item.json?.valor ?? '').trim();\n  if (clave) config[clave] = valor;\n}\nconst entrada = $('Cuando lo llama otro flujo').first().json ?? {};\n\nconst cuerpoTexto = String(entrada.cuerpo ?? '').trim();\nconst cuerpoHtml = entrada.cuerpo_html\n  ? String(entrada.cuerpo_html)\n  : '<p>' + cuerpoTexto.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\\n/g, '<br>') + '</p>';\n\nconst canal = String(entrada.canal ?? 'email').toLowerCase();\nconst chatId = String(entrada.chat_id ?? '').trim();\n\n// 'tienda' (o vacio) quiere decir 'la direccion de la tienda', que sale de la configuracion.\nconst emailTienda = config.EMAIL_MARISA || 'marisa@pasofirme.example';\nlet email = String(entrada.email ?? entrada.destinatario ?? '').trim();\nif (!email || email === 'tienda') email = emailTienda;\n\nreturn [{\n  json: {\n    canal,\n    // 'email' y 'ambos' mandan correo; 'telegram' y 'ambos' mandan Telegram\n    enviar_email: (canal === 'email' || canal === 'ambos') && Boolean(email),\n    // Sin chat_id no hay a quien mandar el Telegram: se salta en silencio.\n    enviar_telegram: (canal === 'telegram' || canal === 'ambos') && Boolean(chatId),\n    email,\n    remitente: config.EMAIL_TIENDA || 'tienda@pasofirme.example',\n    chat_id: chatId,\n    asunto: String(entrada.asunto ?? 'Aviso · Paso Firme'),\n    cuerpo: cuerpoTexto,\n    cuerpo_html: cuerpoHtml,\n  },\n}];\n"
       },
       "id": "2973a06f-d75c-4cbb-842b-3923e49c0284",
       "name": "Preparar envio",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-60, 300]
+      "position": [
+        -60,
+        300
+      ]
     },
     {
       "parameters": {
@@ -51,11 +57,14 @@
       "name": "¿Enviar email?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.4,
-      "position": [160, 300]
+      "position": [
+        160,
+        300
+      ]
     },
     {
       "parameters": {
-        "fromEmail": "={{ $vars.EMAIL_TIENDA || 'tienda@pasofirme.example' }}",
+        "fromEmail": "={{ $('Preparar envio').first().json.remitente }}",
         "fromName": "Zapateria Paso Firme",
         "toEmail": "={{ $json.email }}",
         "subject": "={{ $json.asunto }}",
@@ -68,7 +77,10 @@
       "name": "Enviar email",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
-      "position": [400, 180],
+      "position": [
+        400,
+        180
+      ],
       "credentials": {
         "smtp": {
           "id": "8VDlXyEOFVE0xfEf",
@@ -89,7 +101,10 @@
       "name": "No hay email",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [400, 420]
+      "position": [
+        400,
+        420
+      ]
     },
     {
       "parameters": {
@@ -100,7 +115,10 @@
       "name": "Anotar email",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [640, 300]
+      "position": [
+        640,
+        300
+      ]
     },
     {
       "parameters": {
@@ -131,7 +149,10 @@
       "name": "¿Enviar Telegram?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.4,
-      "position": [860, 300]
+      "position": [
+        860,
+        300
+      ]
     },
     {
       "parameters": {
@@ -146,7 +167,10 @@
       "name": "Enviar Telegram",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [1100, 180],
+      "position": [
+        1100,
+        180
+      ],
       "credentials": {
         "telegramApi": {
           "id": "41b9b9f9-5503-483c-87db-55e30870d0f8",
@@ -164,7 +188,10 @@
       "name": "No hay Telegram",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1100, 420]
+      "position": [
+        1100,
+        420
+      ]
     },
     {
       "parameters": {
@@ -175,7 +202,48 @@
       "name": "Resultado del envio",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1340, 300]
+      "position": [
+        1340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "filePath": "/datos/config.csv",
+        "dataPropertyName": "data"
+      },
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "onError": "continueRegularOutput",
+      "notes": "La configuracion vive en data/config.csv: se cambia sin tocar el flujo.",
+      "name": "Leer configuracion",
+      "position": [
+        -60,
+        140
+      ],
+      "id": "c0f07862-0000-4000-8000-000000000000"
+    },
+    {
+      "parameters": {
+        "operation": "fromFile",
+        "binaryPropertyName": "data",
+        "fileFormat": "csv",
+        "options": {
+          "delimiter": ",",
+          "headerRow": true,
+          "rawData": true,
+          "includeEmptyCells": true
+        }
+      },
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 2,
+      "onError": "continueRegularOutput",
+      "name": "Parsear configuracion",
+      "position": [
+        140,
+        140
+      ],
+      "id": "c0f01455-0000-4000-8000-000000000000"
     }
   ],
   "connections": {
@@ -183,7 +251,7 @@
       "main": [
         [
           {
-            "node": "Preparar envio",
+            "node": "Leer configuracion",
             "type": "main",
             "index": 0
           }
@@ -286,6 +354,28 @@
         [
           {
             "node": "Resultado del envio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer configuracion": {
+      "main": [
+        [
+          {
+            "node": "Parsear configuracion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear configuracion": {
+      "main": [
+        [
+          {
+            "node": "Preparar envio",
             "type": "main",
             "index": 0
           }

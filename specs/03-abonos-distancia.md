@@ -39,11 +39,11 @@ Concepto: zuecos
 2. **¿Es un aviso de pago?** (If): busca marcas de pago (`bizum`, `transferencia`, `importe`,
    `ordenante`, `abonado`) y descarta las de publicidad (`ofertas`, `domicilias`, `condiciones`).
    - No → **terminar en silencio** (nada de avisos: R-A4).
-3. **Extraer con IA** (Basic LLM Chain + modelo de lenguaje): el modelo **solo extrae**
-   `ordenante`, `importe` y `concepto`, y devuelve JSON. La IA **no decide** nada.
-4. **Parsear la respuesta** (Code): saca el JSON de la respuesta del modelo (quitando vallas
+3. **Extraer los datos** (Basic LLM Chain + modelo de lenguaje): el modelo **solo extrae**
+   `ordenante`, `importe` y `concepto`, y devuelve JSON. El modelo **no decide** nada.
+4. **Interpretar la respuesta** (Code): saca el JSON de la respuesta del modelo (quitando vallas
    ```` ``` ````), lo normaliza a mayúsculas sin acentos y valida el formato.
-   Si la IA no está disponible o no devuelve algo usable → **extractor determinista** por
+   Si el modelo no está disponible o no devuelve algo usable → **extractor determinista** por
    expresiones regulares (mismo contrato de salida, `origen: "regex"`).
 5. **Buscar el apartado** (HTTP Request `GET /api/apartados?estado=activo&q=<ordenante>`).
 6. **Elegir el apartado** (Code):
@@ -70,14 +70,14 @@ Concepto: zuecos
 - R-A3: si el importe supera lo pendiente o el apartado está fuera de plazo → **no se registra
   nada** y se avisa a Marisa con el motivo.
 - R-A4: un correo que no es un pago se ignora en silencio.
-- R-A7: a la IA solo se le manda el texto del correo (asunto + cuerpo). **No** se le mandan datos
+- R-A7: al modelo solo se le manda el texto del correo (asunto + cuerpo). **No** se le mandan datos
   de clientes ni de la base de datos.
 
 ## Casos de error
 
 | Caso | Comportamiento |
 |---|---|
-| La IA no está configurada o falla | El extractor determinista toma el relevo; el flujo sigue |
+| El modelo no está configurado o falla | El extractor determinista toma el relevo; el flujo sigue |
 | La API devuelve 401 (clave mal puesta) | Se avisa a Marisa: "no se pudo registrar, credenciales de la API" |
 | La API devuelve 422 (regla del negocio) | Se avisa a Marisa con el `detail` de la API |
 | El nombre coincide con varios apartados | No se registra; se pregunta a Marisa con la lista |
@@ -115,5 +115,5 @@ Concepto: zuecos
 |---|---|---|
 | `Tienda - API` | Header Auth (`X-API-Key`) | Buscar y registrar abonos |
 | `Banco - IMAP` | IMAP | Leer los avisos del banco |
-| `IA - Groq` | OpenAI compatible | Extraer ordenante, importe y concepto |
+| `Modelo - Groq` | OpenAI compatible | Extraer ordenante, importe y concepto |
 | `Gmail - Paso Firme` / `Telegram - Paso Firme` | | Avisar a Marisa y enviar el recibo |
