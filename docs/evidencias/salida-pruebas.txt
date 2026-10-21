@@ -32,4 +32,4 @@
   OK   una venta por debajo del umbral no avisa
   OK   una venta por encima del umbral avisa a Marisa
 
-Correos enviados durante las pruebas: 22 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatizaci¾n\data\envios)
+Correos enviados durante las pruebas: 44 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatizaci¾n\data\envios)
