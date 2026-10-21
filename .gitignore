@@ -32,6 +32,10 @@ data/envios/
 # Copias de seguridad de n8n (las hace el servicio 'backup')
 backups/
 
+# Credenciales exportadas para el despliegue: van EN CLARO, nunca al repositorio
+deploy/credenciales/
+deploy/flujos/
+
 # Sistema operativo / editores
 .DS_Store
 Thumbs.db

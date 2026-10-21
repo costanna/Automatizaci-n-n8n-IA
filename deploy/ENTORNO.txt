@@ -1,0 +1,25 @@
+# Variables de entorno para la instancia de n8n en la nube
+# (en Render: Environment; en otro sitio, el equivalente).
+
+# La URL publica con la que se llega a n8n. Render te la da al crear el servicio.
+WEBHOOK_URL=https://<tu-servicio>.onrender.com
+N8N_WEBHOOK_URL=https://<tu-servicio>.onrender.com/
+
+# La clave con la que se cifran las credenciales. La misma en el servicio web y en el
+# cron de copias: sin ella, las copias de seguridad no se pueden descifrar.
+N8N_ENCRYPTION_KEY=<generala-y-no-la-cambies>
+
+# Zona horaria
+GENERIC_TIMEZONE=Europe/Madrid
+TZ=Europe/Madrid
+
+# Base de datos (si usas el perfil de Postgres del docker-compose)
+DB_TYPE=postgresdb
+DB_POSTGRESDB_HOST=postgres
+DB_POSTGRESDB_PORT=5432
+DB_POSTGRESDB_DATABASE=n8n
+DB_POSTGRESDB_USER=n8n
+DB_POSTGRESDB_PASSWORD=<la-que- pongas>
+
+# Si hay un proxy que intercepta el TLS, anade su certificado en vez de esto:
+# NODE_EXTRA_CA_CERTS=/ruta/ca.crt

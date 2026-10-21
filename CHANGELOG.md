@@ -4,7 +4,24 @@ Todas las novedades del proyecto. El formato sigue
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el versionado es
 [SemVer](https://semver.org/lang/es/).
 
+## [1.5.0] - 2026-10-21
+
+### Añadido
+
+- `docs/ai-log.md`: la bitácora de IA del proyecto (herramienta, modelos, prompts que han
+  funcionado y los 16 fallos reales que hubo que corregir).
+- `scripts/preparar_despliegue.py`: exporta las credenciales, los flujos y la lista de variables
+  que hay que poner en la nube, y avisa de las credenciales que falten.
+- `deploy/ENTORNO.txt`: las variables de entorno del despliegue, con el porqué de cada una.
+
+### Corregido
+
+- El despliegue a la nube: el arranque solo importa los flujos **una vez** (con un marcador en el
+  volumen), importa también las credenciales si van en la imagen, y la guía explica los tres pasos
+  que se olvidaban (credenciales, clave de cifrado y URL pública).
+
 ## [1.4.0] - 2026-10-21
+
 
 ### Añadido
 
