@@ -7,6 +7,8 @@ Comprueba el comportamiento que piden las historias de usuario:
   * Flujo 2: al abonar, el cliente recibe el recibo (y si se liquida, otro mensaje).
   * Flujo 3: los 9 correos de `data/correos/` se resuelven como dice la tabla del README.
   * Flujo 4: la venta grande avisa a Marisa y la pequena no.
+  * Flujo 11: el apartado desde casa se solicita y se confirma.
+  * Flujo 13: las ventas del datafono se importan y no se duplican.
 
 Para las pruebas hace falta:
   - la tienda y n8n levantados (`docker compose up -d`);
@@ -142,6 +144,21 @@ def correos_enviados() -> list[dict]:
             "texto": cuerpo,
         })
     return salida
+
+
+def n8n_webhook(ruta: str, cuerpo: dict):
+    """Llama a un webhook de n8n y devuelve (codigo, cuerpo de la respuesta)."""
+    peticion = urllib.request.Request(
+        N8N + ruta,
+        json.dumps(cuerpo, ensure_ascii=False).encode("utf-8"),
+        {"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(peticion, timeout=60) as r:
+            return r.status, r.read().decode("utf-8")[:200]
+    except urllib.error.HTTPError as e:
+        return e.code, ""
 
 
 def leer_correo(ruta: Path) -> tuple[str, str]:
@@ -340,6 +357,76 @@ def probar_flujo_3(r: Resultado, solo: str | None = None):
             r.comprobar(len(nuevos) > 0, f"{caso['fichero']}: se avisa a Marisa")
 
 
+def probar_flujo_11(r: Resultado):
+    """HU-13: apartado desde casa (formulario -> solicitud -> confirmacion)."""
+    print("\n== Flujo 11 · Apartados desde casa ==")
+    antes = len(correos_enviados())
+    st, _ = n8n_webhook("/webhook/apartar-zapatos", {
+        "cliente": "Cliente Casa Demo",
+        "telefono": "600 555 111",
+        "email": "casa.demo@example.com",
+        "producto": "Botin piel marron",
+        "talla": "39",
+        "precio": "89.90",
+        "forma_pago": "bizum",
+    })
+    r.comprobar(st == 200, f"el cliente envia la solicitud (respuesta {st})")
+    time.sleep(ESPERA)
+    nuevos = correos_enviados()[antes:]
+    r.comprobar(any("Casa Demo" in c["texto"] for c in nuevos),
+                "la tienda recibe el aviso de la solicitud")
+
+    # El codigo de la solicitud lo genera el flujo: se busca en el aviso.
+    codigo = ""
+    for c in nuevos:
+        m = re.search(r"SOL-\d{4}", c["texto"])
+        if m:
+            codigo = m.group(0)
+            break
+    r.comprobar(bool(codigo), f"el aviso lleva el codigo de la solicitud ({codigo or 'no aparece'})")
+    if not codigo:
+        return
+
+    st, _ = n8n_webhook("/webhook/confirmar-solicitud", {"codigo": codigo, "importe": 10})
+    r.comprobar(st == 200, f"la tienda confirma la solicitud (respuesta {st})")
+    time.sleep(ESPERA)
+
+    apartado = None
+    for a in api("GET", "/api/apartados")[1]:
+        if a.get("cliente") == "Cliente Casa Demo":
+            apartado = a
+            break
+    r.comprobar(apartado is not None, "el apartado se crea en la app")
+    if apartado:
+        r.comprobar(abs(apartado["abonado"] - 10) < 0.01, "el abono inicial son 10 EUR")
+        r.comprobar(abs(apartado["pendiente"] - 79.9) < 0.01, "el pendiente son 79,90 EUR")
+
+
+def probar_flujo_13(r: Resultado):
+    """HU-13: las ventas del datafono se importan una sola vez."""
+    print("\n== Flujo 13 · Ventas del datafono ==")
+    conceptos = {"Bota montana T41", "Zapatilla casa T38", "Calcetines pack 3",
+                 "Botin piel negro T40", "Crema calzado", "Zapatilla running azul T43",
+                 "Plantillas gel"}
+
+    def ventas_datafono():
+        return [v for v in api("GET", "/api/ventas")[1]
+                if v.get("fecha") in ("2026-10-19", "2026-10-20")
+                and v.get("forma_pago") == "tarjeta"
+                and v.get("concepto") in conceptos]
+
+    antes = len(ventas_datafono())
+    r.comprobar(n8n_webhook("/webhook/datxfono", {})[0] == 200, "se lanza la importacion")
+    time.sleep(ESPERA)
+    despues = len(ventas_datafono())
+    r.comprobar(despues > antes, f"se importan cobros nuevos ({antes} -> {despues})")
+
+    r.comprobar(n8n_webhook("/webhook/datxfono", {})[0] == 200, "se lanza la importacion otra vez")
+    time.sleep(ESPERA)
+    final = len(ventas_datafono())
+    r.comprobar(final == despues, f"la segunda vez no se duplica nada ({despues} -> {final})")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Pruebas de los flujos de n8n")
     ap.add_argument("--flujo", type=int, default=None, help="probar solo un flujo (1, 2, 3 o 4)")
@@ -373,6 +460,10 @@ def main() -> int:
         probar_flujo_3(r, args.caso)
     if todo or args.flujo == 4:
         probar_flujo_4(r)
+    if args.flujo == 11:
+        probar_flujo_11(r)
+    if args.flujo == 13:
+        probar_flujo_13(r)
 
     print()
     print(f"Correos enviados durante las pruebas: {len(correos_enviados())} (en {CARPETA_ENVIOS})")
