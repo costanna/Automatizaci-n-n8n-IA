@@ -154,6 +154,25 @@ mensajes ni en los logs. Las credenciales viven en n8n:
 6. **No** borrar datos ni borrar flujos que no hayas creado tú.
 7. **No** cambiar el contrato de la API (URL, cabeceras, nombres de campos) sin actualizar la spec.
 
+## 9 bis. n8n 2.x: las trampas que ya nos han mordido
+
+Este proyecto se ha probado con **n8n 2.44**. Estas son las cosas que fallan en silencio:
+
+| Trampa | Qué pasa | Cómo se hace bien |
+|---|---|---|
+| Nodo HTTP Request con credencial | Si faltan `authentication: "genericCredentialType"` **y** `genericAuthType: "httpHeaderAuth"`, la petición sale **sin la cabecera** y la API responde `401` sin avisar | Poner los dos parámetros |
+| `localhost` dentro de n8n | Es el propio n8n, no la tienda | `http://tienda:8000` |
+| Peticiones HTTP encadenadas | La segunda se lanza **una vez por item** de la primera, con expresiones que ya no valen | Meter un nodo Code que devuelva **un** item antes de cada petición |
+| Nodo Code con `runOnceForAllItems` | Recibe todos los items de una vez, pero devuelve un solo item | Si necesitas un item por fila, usa `runOnceForEachItem` o `return` un array |
+| Leer un fichero | En n8n 2.x el binario se guarda en disco: el nodo Code **no** puede leerlo | Nodo *Spreadsheet File* para CSV, o `$getWorkflowStaticData('global')` para recordar cosas entre ejecuciones |
+| Escribir un fichero | `writeBinaryFile` resuelve la ruta contra el almacén de n8n y falla con `EACCES` | Usa los *static data* del flujo (la memoria de n8n entre ejecuciones) |
+| Ficheros fuera de `~/.n8n-files` | `Access to the file is not allowed` | `N8N_RESTRICT_FILE_ACCESS_TO` en el `docker-compose.yml` |
+| Un nodo con dos ramas | Solo hay una salida: las dos ramas van en `main[0]` | `{"main": [[{"node": "A"}, {"node": "B"}]]}` |
+| Referencia a un nodo que no se ha ejecutado | `An expression references this node, but the node is unexecuted` | `$(('X').isExecuted ? ... : ...)` |
+| `typeVersion` inventado | El nodo no hace lo que se espera o no se importa | Mirar el nodo real: `dist/nodes/<Nodo>/<Nodo>.node.js` en el contenedor |
+| Un `If` con la salida puesta al revés | Se ejecuta la rama contraria | Revisar `connections`: la salida 0 es *true* y la 1 es *false* |
+| Publicar un flujo que llama a otro | `Cannot publish workflow: ... references workflow ... which is not published` | Publicar primero los subflujos |
+
 ## 10. Cómo se trabaja: Spec-Driven Development
 
 1. **Primero la spec** (`specs/`): disparador, entradas, salidas, casos de error y criterios de
