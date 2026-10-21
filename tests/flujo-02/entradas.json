@@ -1,0 +1,54 @@
+{
+  "flujo": "02 · Recibo de abono",
+  "disparador": "evento abono.registrado (webhook /tienda de la app)",
+  "casos": [
+    {
+      "nombre": "abono parcial",
+      "entrada": {
+        "evento": "abono.registrado",
+        "datos": {
+          "id": 25,
+          "cliente": "Carmen Ruiz",
+          "email": "carmen@example.com",
+          "producto": "Botín piel marrón",
+          "talla": "38",
+          "precio": 89.9,
+          "fecha_limite": "2027-01-18",
+          "estado": "activo",
+          "abonado": 30.0,
+          "pendiente": 59.9,
+          "importe": 20.0
+        }
+      },
+      "resultado_esperado": {
+        "email_enviado_a": "carmen@example.com",
+        "debe_contener": ["20,00 EUR", "59,90 EUR", "2027-01-18"],
+        "no_debe_contener": ["puedes pasar por la tienda"]
+      }
+    },
+    {
+      "nombre": "abono que liquida",
+      "entrada": {
+        "evento": "abono.registrado",
+        "datos": {
+          "id": 3,
+          "cliente": "Lucía Gómez",
+          "email": "lucia@example.com",
+          "producto": "Sandalia tacón negra",
+          "talla": "37",
+          "precio": 45.0,
+          "fecha_limite": "2027-01-10",
+          "estado": "liquidado",
+          "abonado": 45.0,
+          "pendiente": 0.0,
+          "importe": 12.0
+        }
+      },
+      "resultado_esperado": {
+        "email_enviado_a": "lucia@example.com",
+        "debe_contener": ["12,00 EUR", "recoger"],
+        "el_mensaje_cambia": true
+      }
+    }
+  ]
+}

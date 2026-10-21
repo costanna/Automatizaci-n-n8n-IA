@@ -1,0 +1,48 @@
+{
+  "flujo": "01 · Confirmación de apartado",
+  "disparador": "evento apartado.creado (webhook /tienda de la app)",
+  "entrada": {
+    "evento": "apartado.creado",
+    "datos": {
+      "id": 25,
+      "fecha": "2026-10-20",
+      "cliente": "Carmen Ruiz",
+      "telefono": "612 345 001",
+      "email": "carmen@example.com",
+      "producto": "Botín piel marrón",
+      "talla": "38",
+      "precio": 89.9,
+      "fecha_limite": "2027-01-18",
+      "estado": "activo",
+      "abonado": 10.0,
+      "pendiente": 79.9
+    }
+  },
+  "resultado_esperado": {
+    "email_enviado_a": "carmen@example.com",
+    "asunto": "Tu apartado · Paso Firme",
+    "debe_contener": ["Botín piel marrón", "89,90 EUR", "10,00 EUR", "79,90 EUR", "2027-01-18"]
+  },
+  "caso_sin_correo": {
+    "entrada": {
+      "evento": "apartado.creado",
+      "datos": {
+        "id": 26,
+        "cliente": "Cliente Sin Correo",
+        "email": null,
+        "producto": "Zapatilla running azul",
+        "precio": 64.5,
+        "abonado": 5.0,
+        "pendiente": 59.5,
+        "fecha_limite": "2027-01-18",
+        "estado": "activo"
+      }
+    },
+    "resultado_esperado": {
+      "email_enviado_a": "marisa@pasofirme.example",
+      "asunto": "Apartado #26 · el cliente no tiene correo",
+      "debe_contener": ["no tiene correo", "59,50 EUR"],
+      "el_flujo_no_falla": true
+    }
+  }
+}
