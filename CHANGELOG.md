@@ -4,6 +4,30 @@ Todas las novedades del proyecto. El formato sigue
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el versionado es
 [SemVer](https://semver.org/lang/es/).
 
+## [1.1.0] - 2026-10-21
+
+### Añadido
+
+- `data/config.csv`: la configuración de los flujos (a quién se avisa, el umbral de la venta
+  grande, los días de aviso) sale de aquí. Los flujos lo leen en cada ejecución, así que se
+  cambia **sin tocar ningún flujo** ni republicar nada (criterio de HU-09).
+- `docs/bitacora.md`: la bitácora técnica del proyecto, con las decisiones, la comparativa de
+  modelos y los doce fallos encontrados al construir y probar los flujos.
+
+### Corregido
+
+- La configuración ya no dependía de las variables de n8n (`$vars`), que en la edición
+  comunitaria no existen, ni de `$env`, que n8n 2.x bloquea en las expresiones
+  (`access to env vars denied`). Ahora se lee de `data/config.csv`.
+- El valor `DIAS_AVISO_VENCIMIENTO` va entre comillas en el CSV: `7,1` sin comillas rompía la
+  lectura del fichero.
+- La configuración se lee **sin BOM**: un fichero guardado con BOM añadía un carácter invisible
+  al nombre de la primera clave.
+- El flujo 06 vuelve a leer los apartados del nodo que los pide a la API (la configuración va
+  por delante en la cadena).
+- Los nodos del flujo 03 se llaman «Extraer los datos» y «Modelo de lenguaje», en vez de
+  nombres con siglas.
+
 ## [1.0.1] - 2026-10-21
 
 ### Corregido
@@ -27,9 +51,9 @@ reutilizables, sus specs, sus pruebas y la documentación.
 - `02 · Recibo de abono`: recibo con el importe pagado y lo pendiente; si el apartado queda
   liquidado, el mensaje cambia y avisa de que puede recoger los zapatos.
 - `03 · Abonos a distancia`: lee los avisos del banco, extrae ordenante, importe y concepto (con
-  IA y con un extractor de respaldo), busca el apartado por API y registra el abono. Si hay
+  un modelo de lenguaje y con un extractor de respaldo), busca el apartado por API y registra el abono. Si hay
   dudas, paga de más o está fuera de plazo, no registra nada y pregunta a Marisa.
-- `04 · Aviso de venta grande`: avisa de las ventas por encima de `$vars.UMBRAL_VENTA_GRANDE`.
+- `04 · Aviso de venta grande`: avisa de las ventas por encima de `$env.UMBRAL_VENTA_GRANDE`.
 - `05 · Cierre diario`: cada noche, ventas, abonos y total desglosados por forma de pago.
 - `06 · Recordatorios y vencimientos`: recuerda los vencimientos (7 y 1 días), vence por API los
   apartados fuera de plazo, avisa del vale y manda a la tienda la lista de zapatos que vuelven.
@@ -51,9 +75,9 @@ reutilizables, sus specs, sus pruebas y la documentación.
 
 - `specs/`: la ontología del dominio y la especificación de cada automatización, con sus
   criterios de aceptación.
-- `AGENTS.md`: el contexto que se le da al agente de IA, con las trampas de n8n 2.x.
+- `AGENTS.md`: el contexto del proyecto, con las reglas del negocio y las trampas de n8n 2.x.
 - `docs/`: mapa del proceso (antes y después), kanban, credenciales, guía de importación,
-  bitácora de IA y retrospectiva.
+  bitácora técnica y retrospectiva.
 - `scripts/enlazar_flujos.py`: importa los flujos en n8n y resuelve los ids de subflujos y
   credenciales de la instancia.
 - `scripts/validar_flujos.py`: valida los JSON y busca credenciales escritas dentro.

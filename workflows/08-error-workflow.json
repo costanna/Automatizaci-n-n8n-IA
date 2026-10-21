@@ -30,7 +30,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// El aviso va a la tienda. Si no se puede enviar, se deja constancia en el\n// propio item para que la ejecucion de n8n lo muestre.\nconst aviso = $input.first().json ?? {};\nconst emailTienda = $vars.EMAIL_MARISA || 'marisa@pasofirme.example';\nconst escapar = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nreturn [{\n  json: {\n    canal: 'email',\n    email: emailTienda,\n    asunto: 'Error en una automatizacion · ' + (aviso.flujo ?? ''),\n    cuerpo: aviso.cuerpo ?? '',\n    cuerpo_html: '<p>' + escapar(aviso.cuerpo ?? '').replace(/\\n/g, '<br>') + '</p>',\n  },\n}];\n"
+        "jsCode": "// El aviso va a la tienda. Si no se puede enviar, se deja constancia en el\n// propio item para que la ejecucion de n8n lo muestre.\nconst aviso = $input.first().json ?? {};\n// 'tienda' quiere decir 'la direccion de la tienda', que resuelve el\n// subflujo de notificacion con el fichero de configuracion.\nconst emailTienda = 'tienda';\nconst escapar = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nreturn [{\n  json: {\n    canal: 'email',\n    email: emailTienda,\n    asunto: 'Error en una automatizacion · ' + (aviso.flujo ?? ''),\n    cuerpo: aviso.cuerpo ?? '',\n    cuerpo_html: '<p>' + escapar(aviso.cuerpo ?? '').replace(/\\n/g, '<br>') + '</p>',\n  },\n}];\n"
       },
       "id": "35e140e9-82b6-468d-b3e6-e87d68517d59",
       "name": "Preparar aviso a la tienda",

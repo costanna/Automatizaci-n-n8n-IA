@@ -144,6 +144,6 @@ los subflujos (`SUB · Notificar`) ya aceptan los dos canales, así que el asist
 |---|---|
 | Persona 1 | Flujos 1, 2 y 8 (avisos al cliente) + el despachador de eventos |
 | Persona 2 | Flujos 3, 5, 6 y 7 (caja, vencimientos e informes) + la migración del Excel |
-| Las dos | Revisión cruzada de cada PR, specs y bitácora de IA |
+| Las dos | Revisión cruzada de cada PR, specs y bitácora técnica |
 
 Ninguna pareja toca dos ramas a la vez: el tablero marca una tarjeta en curso por persona.
