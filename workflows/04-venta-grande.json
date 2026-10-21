@@ -1,0 +1,126 @@
+{
+  "name": "04 · Aviso de venta grande",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "21bb885c-4d45-48c6-b015-3f9da7e5383f",
+      "name": "Datos de la venta",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c54cb14f-700e-4f0c-b0a5-db0b28828dca",
+              "leftValue": "={{ Number($json.datos?.importe ?? $json.importe ?? 0) }}",
+              "rightValue": "={{ Number($vars.UMBRAL_VENTA_GRANDE || 200) }}",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6d10e2f5-11cc-4e06-8b9d-558d07cd57e6",
+      "name": "¿Venta grande?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Aviso a Marisa de una venta grande (HU-09).\n//\n// El umbral NO esta en el flujo: vive en la variable de n8n UMBRAL_VENTA_GRANDE\n// (Settings > Variables). Asi se cambia sin tocar el flujo.\n// El importe es el de la API: no se recalcula.\nconst entrada = $input.first().json ?? {};\nconst d = entrada.datos ?? entrada;\n\nconst euros = (n) => Number(n ?? 0).toFixed(2).replace('.', ',') + ' EUR';\nconst escapar = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst html = (s) => '<p>' + escapar(s).replace(/\\n/g, '<br>') + '</p>';\n\nconst emailTienda = $vars.EMAIL_MARISA || 'marisa@pasofirme.example';\nconst umbral = Number($vars.UMBRAL_VENTA_GRANDE || 200);\n\nconst cuerpo = [\n  'Ojo, esta venta es grande:',\n  '',\n  'Concepto: ' + (d.concepto ?? ''),\n  'Importe: ' + euros(d.importe),\n  'Forma de pago: ' + (d.forma_pago ?? ''),\n  'Fecha: ' + (d.fecha ?? ''),\n  '',\n  'Umbral de aviso: ' + euros(umbral),\n].join('\\n');\n\nreturn [{\n  json: {\n    canal: 'email',\n    email: emailTienda,\n    asunto: 'Venta grande · ' + euros(d.importe),\n    cuerpo,\n    cuerpo_html: html(cuerpo),\n    importe: d.importe ?? null,\n    umbral,\n  },\n}];\n"
+      },
+      "id": "3ab77ec5-ab4b-4a3b-a94f-3a694b8adefa",
+      "name": "Preparar aviso",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "qiU7wQ7zQlr3HNNp",
+          "mode": "list",
+          "cachedResultName": "SUB · Notificar"
+        },
+        "mode": "once",
+        "options": {}
+      },
+      "id": "98fec62c-057b-4eba-b78a-5abff0197740",
+      "name": "Notificar",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        500,
+        180
+      ]
+    }
+  ],
+  "connections": {
+    "Datos de la venta": {
+      "main": [
+        [
+          {
+            "node": "¿Venta grande?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Venta grande?": {
+      "main": [
+        [
+          {
+            "node": "Preparar aviso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar aviso": {
+      "main": [
+        [
+          {
+            "node": "Notificar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}
