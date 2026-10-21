@@ -4,6 +4,13 @@ Todas las novedades del proyecto. El formato sigue
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el versionado es
 [SemVer](https://semver.org/lang/es/).
 
+## [1.0.1] - 2026-10-21
+
+### Corregido
+
+- `docs/credenciales.md`: la lista de credenciales incluía `Histórico - Sheets`, que ningún flujo
+  usa. El histórico de cierres y de recordatorios se guarda en los *static data* de cada flujo.
+
 ## [1.0.0] - 2026-10-21
 
 Primera entrega: **nivel 🟢 Esencial + 🟡 Medio**. Ocho automatizaciones, tres subflujos
