@@ -7,6 +7,7 @@ Comprueba el comportamiento que piden las historias de usuario:
   * Flujo 2: al abonar, el cliente recibe el recibo (y si se liquida, otro mensaje).
   * Flujo 3: los 9 correos de `data/correos/` se resuelven como dice la tabla del README.
   * Flujo 4: la venta grande avisa a Marisa y la pequena no.
+  * Flujo 5: el cierre de caja trae las ventas y los abonos de hoy, por forma de pago.
   * Flujo 6: recordatorios a 7 y 1 dias, y los fuera de plazo se vencen con su vale.
   * Flujo 7: el informe mensual trae las cifras de la API.
   * Flujo 8: si un flujo falla (la tienda parada), la tienda recibe el aviso del error.
@@ -21,14 +22,14 @@ Para las pruebas hace falta:
   - el servidor SMTP de desarrollo, para ver los correos que se envian:
         python scripts/smtp_desarrollo.py
   - el webhook de la app apuntando a n8n (el `.env` lo trae de serie).
-  - para los flujos 6 y 7 (programados): la cuenta de n8n en N8N_EMAIL y N8N_PASSWORD.
+  - para los flujos 5, 6 y 7 (programados): la cuenta de n8n en N8N_EMAIL y N8N_PASSWORD.
     Se lanzan como el boton "Execute workflow" del editor, sin esperar a su hora.
   - para el flujo 14: el mock de Telegram (`scripts/telegram_mock.py`, ver su ayuda).
 
 Uso:
     python scripts/probar_flujos.py                 # flujos 1 a 4
     python scripts/probar_flujos.py --flujo 3       # solo el flujo 3
-    python scripts/probar_flujos.py --flujo 6       # los flujos 6, 7, 8, 11, 13, 14 y 15 van de uno en uno
+    python scripts/probar_flujos.py --flujo 6       # los flujos 5, 6, 7, 8, 11, 13, 14 y 15 van de uno en uno
     python scripts/probar_flujos.py --listar        # ver los casos
 """
 
@@ -579,6 +580,68 @@ def probar_flujo_13(r: Resultado):
     r.comprobar(final == despues, f"la segunda vez no se duplica nada ({despues} -> {final})")
 
 
+def probar_flujo_5(r: Resultado):
+    """HU-04: el cierre de caja trae las ventas y los abonos de hoy, por forma de pago."""
+    print("\n== Flujo 5 · Cierre diario ==")
+    hoy = hoy_madrid().isoformat()
+    # Un movimiento de cada forma de pago (por debajo del umbral de venta grande).
+    api("POST", "/api/ventas", {"concepto": "Cordones prueba cierre", "importe": 3.5, "forma_pago": "efectivo"})
+    api("POST", "/api/ventas", {"concepto": "Plantillas prueba cierre", "importe": 12.25, "forma_pago": "bizum"})
+    en_plazo = [a for a in apartados() if a["estado"] == "activo" and a["pendiente"] >= 5
+                and a["fecha_limite"] >= hoy]
+    if en_plazo:
+        api("POST", f"/api/apartados/{en_plazo[0]['id']}/abonos", {"importe": 5, "forma_pago": "tarjeta"})
+    time.sleep(ESPERA)
+
+    ventas = api("GET", f"/api/ventas?desde={hoy}&hasta={hoy}")[1]
+    abonos = api("GET", f"/api/abonos?desde={hoy}&hasta={hoy}")[1]
+    suma = lambda filas, forma=None: round(sum(x["importe"] for x in filas
+                                               if forma is None or x.get("forma_pago") == forma), 2)
+
+    antes = len(correos_enviados())
+    estado = ejecutar_programado("05 · Cierre diario")
+    if not r.comprobar(estado == "success", f"el flujo se ejecuta ({estado})"):
+        return
+    time.sleep(3)
+    asunto = f"Cierre de caja · {fecha_es(hoy)}"
+    cierres = [c for c in correos_enviados()[antes:] if c["asunto"] == asunto]
+    if not r.comprobar(len(cierres) == 1 and "marisa@" in cierres[0]["destinatario"],
+                       f"Marisa recibe el cierre ({asunto})"):
+        return
+    texto = cierres[0]["texto"]
+    r.comprobar(f"Ventas directas: {euros(suma(ventas))} ({len(ventas)} ventas)" in texto,
+                f"ventas directas: {euros(suma(ventas))} ({len(ventas)} ventas, lo que da la API)")
+    r.comprobar(f"Abonos cobrados: {euros(suma(abonos))} ({len(abonos)} abonos)" in texto,
+                f"abonos cobrados: {euros(suma(abonos))} ({len(abonos)} abonos)")
+    r.comprobar(f"Total del dia: {euros(suma(ventas) + suma(abonos))}" in texto,
+                f"total del dia: {euros(suma(ventas) + suma(abonos))}")
+    for forma in ("efectivo", "tarjeta", "bizum"):
+        linea = f"{forma.capitalize()}: {euros(suma(ventas, forma))} en ventas + {euros(suma(abonos, forma))} en abonos"
+        r.comprobar(linea in texto, linea)
+    # El dia sin movimientos esta en tests/flujo-05/entradas.json: aqui no se puede vaciar
+    # el dia sin borrar los datos de la tienda.
+
+    # Si la API no contesta, el cierre se para (y en produccion avisa el Error Workflow):
+    # no puede llegar a Marisa un cierre con ceros como si no hubiera vendido nada.
+    import subprocess
+
+    antes = len(correos_enviados())
+    subprocess.run(["docker", "compose", "stop", "tienda"], cwd=RAIZ, capture_output=True, timeout=120)
+    try:
+        estado = ejecutar_programado("05 · Cierre diario")
+    finally:
+        subprocess.run(["docker", "compose", "start", "tienda"], cwd=RAIZ, capture_output=True, timeout=120)
+    r.comprobar(estado == "error", f"con la tienda caida, el cierre se para ({estado})")
+    r.comprobar(not any(c["asunto"] == asunto for c in correos_enviados()[antes:]),
+                "y no manda un cierre con ceros")
+    for _ in range(40):
+        try:
+            api("GET", "/api/apartados/resumen")
+            break
+        except Exception:
+            time.sleep(1)
+
+
 def probar_flujo_6(r: Resultado):
     """HU-06 y HU-07: recordatorios a 7 y 1 dias, y los fuera de plazo se vencen con su vale."""
     from datetime import timedelta
@@ -854,7 +917,7 @@ def probar_flujo_15(r: Resultado):
 def main() -> int:
     ap = argparse.ArgumentParser(description="Pruebas de los flujos de n8n")
     ap.add_argument("--flujo", type=int, default=None,
-                    help="probar solo un flujo (1, 2, 3, 4, 6, 7, 8, 11, 13, 14 o 15)")
+                    help="probar solo un flujo (1, 2, 3, 4, 5, 6, 7, 8, 11, 13, 14 o 15)")
     ap.add_argument("--caso", default=None, help="probar solo un caso del flujo 3 (nombre del fichero)")
     ap.add_argument("--listar", action="store_true", help="listar los casos del flujo 3")
     ap.add_argument("--seguridad", action="store_true",
@@ -894,6 +957,8 @@ def main() -> int:
         probar_flujo_11(r)
     if args.flujo == 13:
         probar_flujo_13(r)
+    if args.flujo == 5:
+        probar_flujo_5(r)
     if args.flujo == 6:
         probar_flujo_6(r)
     if args.flujo == 8:

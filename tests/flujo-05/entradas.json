@@ -1,15 +1,40 @@
 {
   "flujo": "05 · Cierre diario",
   "disparador": "Schedule Trigger (23:00, Europe/Madrid)",
+  "prueba": "python scripts/probar_flujos.py --flujo 5 (con N8N_EMAIL y N8N_PASSWORD)",
   "entrada": {
     "hoy": "2026-10-20",
     "ventas": [
-      { "id": 1, "fecha": "2026-10-20", "concepto": "Bota montaña T41", "importe": 79.9, "forma_pago": "tarjeta" },
-      { "id": 2, "fecha": "2026-10-20", "concepto": "Calcetines pack 3", "importe": 6.5, "forma_pago": "efectivo" }
+      {
+        "id": 1,
+        "fecha": "2026-10-20",
+        "concepto": "Bota montaña T41",
+        "importe": 79.9,
+        "forma_pago": "tarjeta"
+      },
+      {
+        "id": 2,
+        "fecha": "2026-10-20",
+        "concepto": "Calcetines pack 3",
+        "importe": 6.5,
+        "forma_pago": "efectivo"
+      }
     ],
     "abonos": [
-      { "id": 10, "apartado_id": 1, "fecha": "2026-10-20", "importe": 20.0, "forma_pago": "bizum" },
-      { "id": 11, "apartado_id": 2, "fecha": "2026-10-20", "importe": 5.0, "forma_pago": "efectivo" }
+      {
+        "id": 10,
+        "apartado_id": 1,
+        "fecha": "2026-10-20",
+        "importe": 20.0,
+        "forma_pago": "bizum"
+      },
+      {
+        "id": 11,
+        "apartado_id": 2,
+        "fecha": "2026-10-20",
+        "importe": 5.0,
+        "forma_pago": "efectivo"
+      }
     ]
   },
   "resultado_esperado": {
@@ -19,18 +44,48 @@
     "abonos": 25.0,
     "total": 111.4,
     "por_forma_pago": {
-      "efectivo": { "ventas": 6.5, "abonos": 5.0, "total": 11.5 },
-      "tarjeta": { "ventas": 79.9, "abonos": 0.0, "total": 79.9 },
-      "bizum": { "ventas": 0.0, "abonos": 20.0, "total": 20.0 }
+      "efectivo": {
+        "ventas": 6.5,
+        "abonos": 5.0,
+        "total": 11.5
+      },
+      "tarjeta": {
+        "ventas": 79.9,
+        "abonos": 0.0,
+        "total": 79.9
+      },
+      "bizum": {
+        "ventas": 0.0,
+        "abonos": 20.0,
+        "total": 20.0
+      }
     },
-    "debe_contener": ["86,40 EUR", "25,00 EUR", "111,40 EUR"]
+    "debe_contener": [
+      "86,40 EUR",
+      "25,00 EUR",
+      "111,40 EUR"
+    ]
   },
   "dia_sin_movimientos": {
-    "entrada": { "hoy": "2026-10-21", "ventas": [], "abonos": [] },
+    "entrada": {
+      "hoy": "2026-10-21",
+      "ventas": [],
+      "abonos": []
+    },
     "resultado_esperado": {
       "email_enviado_a": "marisa@pasofirme.example",
-      "debe_contener": ["no ha habido movimientos"],
+      "debe_contener": [
+        "no ha habido movimientos"
+      ],
       "el_flujo_no_falla": true
+    }
+  },
+  "api_caida": {
+    "entrada": "La tienda no contesta (o la API devuelve un error) al pedir las ventas o los abonos",
+    "resultado_esperado": {
+      "el_flujo_se_para": true,
+      "no_se_envia_el_cierre": true,
+      "aviso": "El Error Workflow avisa a la tienda (en produccion)"
     }
   }
 }
