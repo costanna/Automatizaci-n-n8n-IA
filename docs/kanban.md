@@ -3,12 +3,16 @@
 Una tarjeta por historia de usuario, con sus criterios de aceptación como lista de
 comprobación. Las historias que llevan etiqueta de nivel **solo** se hacen si se llega a ese nivel.
 
+> **El tablero vivo está en GitHub:** [Zapatería Paso Firme — Kanban](https://github.com/users/costanna/projects/5).
+> Cada historia es un issue del repositorio, con las etiquetas de su nivel y los campos *Nivel* y
+> *Responsable*. Este documento es la copia en el repositorio.
+
 ## 🗂️ Tablero
 
 | Por hacer | En curso | En revisión | Hecho |
 |---|---|---|---|
-| | | | HU-01 · Confirmación al apartar 🟢 |
-| HU-16 · Funcionar siempre 🔴 | | | HU-02 · Recibo de cada abono 🟢 |
+| | HU-16 · Funcionar siempre 🔴 | | HU-01 · Confirmación al apartar 🟢 |
+| | | | HU-02 · Recibo de cada abono 🟢 |
 | | | | HU-03 · Abonos por Bizum o transferencia 🟢 |
 | | | | HU-04 · Cierre de caja automático 🟢 |
 | | | | HU-05 · Avisos de errores 🟢 |
@@ -22,7 +26,6 @@ comprobación. Las historias que llevan etiqueta de nivel **solo** se hacen si s
 | | | | HU-13 · Entrada automática de datos 🟠 |
 | | | | HU-14 · Datos personales protegidos 🟠 |
 | | | | HU-15 · Panel para Marisa 🔴 |
-| | | | HU-16 · Funcionar siempre 🔴 |
 
 ## 📋 Tarjetas
 
@@ -80,10 +83,11 @@ comprobación. Las historias que llevan etiqueta de nivel **solo** se hacen si s
 > después que algo dejó de funcionar.
 
 - [x] Cualquier flujo que falle envía un aviso con el nombre del flujo, el paso y el error.
+  (Todos los flujos tienen `08 · Avisos de error` como *Error Workflow*.)
 - [x] El aviso no incluye contraseñas ni claves.
 
 **Flujo:** `08 · Avisos de error` · **Spec:** `specs/08-error-workflow.md`
-**Prueba:** flujo de prueba que falla a propósito (`docs/como-importar-flujos.md`)
+**Prueba:** `scripts/probar_flujos.py --flujo 8` (para la tienda y comprueba que llega el aviso)
 
 ### HU-06 · Recordatorios de vencimiento 🟡
 
