@@ -65,6 +65,9 @@ Concepto: zuecos
 
 ## Reglas
 
+- **La entrada manual (`POST /webhook/abonos-distancia`) va protegida**: pide la cabecera
+  `X-Webhook-Token` (credencial `Webhooks - Tienda`). Sin ella, n8n responde 403 y no registra
+  nada: si no, cualquiera podría mandar un aviso del banco falso.
 - R-A1: el importe que se registra es el que dice el aviso; el pendiente es el de la API.
 - R-A2: si hay dudas → **no se registra nada** y se pregunta.
 - R-A3: si el importe supera lo pendiente o el apartado está fuera de plazo → **no se registra

@@ -60,6 +60,9 @@ todo lo necesario para confirmarla en cuanto llegue el abono inicial.
 
 ## Reglas
 
+- **El formulario es público; la confirmación no.** `GET/POST /webhook/apartar-zapatos` lo usa
+  cualquier cliente, pero `POST /webhook/confirmar-solicitud` crea el apartado en la app: pide la
+  cabecera `X-Webhook-Token` (credencial `Webhooks - Tienda`), y sin ella n8n responde 403.
 - **El apartado no se crea hasta que llega el abono inicial.** La primera vez solo se crea la
   *solicitud*: la app exige un abono de al menos 5 € al crear el apartado, y no se puede
   inventar ese dinero.
@@ -96,6 +99,7 @@ curl -X POST http://localhost:5678/webhook/apartar-zapatos \
 # 2. la tienda confirma cuando llega el abono
 curl -X POST http://localhost:5678/webhook/confirmar-solicitud \
   -H "Content-Type: application/json" \
+  -H "X-Webhook-Token: <el WEBHOOK_TOKEN del .env>" \
   -d '{"codigo":"SOL-0001","importe":10}'
 ```
 

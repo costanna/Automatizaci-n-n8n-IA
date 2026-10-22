@@ -13,7 +13,9 @@
 | `SMTP - Paso Firme` | **SMTP** | Host, puerto, usuario y contraseña del correo saliente | `sub-notificar` (envío de todos los mensajes) |
 | `Banco - IMAP` | **IMAP** | Host, puerto, usuario y contraseña del buzón del banco | `03 · Abonos a distancia` (leer los avisos) |
 | `Telegram - Paso Firme` | **Telegram API** | El token del bot | `14 · Asistente de Telegram` (responder) y `sub-notificar` (canal opcional) |
-| `Telegram - Token del bot` | **Header Auth** | Name: `X-Telegram-Bot-Api-Secret-Token` · Value: el `TELEGRAM_SECRET_TOKEN` | `14 · Asistente de Telegram` (el webhook que recibe los updates) |
+| `Telegram - Token del bot` | **Header Auth** | Name: `X-Telegram-Bot-Api-Secret-Token` · Value: el `TELEGRAM_SECRET_TOKEN` de tu `.env` | `14 · Asistente de Telegram` (el webhook que recibe los updates) |
+| `Webhooks - Tienda` | **Header Auth** | Name: `X-Webhook-Token` · Value: el `WEBHOOK_TOKEN` de tu `.env` | Los webhooks que escriben en la tienda: `03` (`/abonos-distancia`), `11` (`/confirmar-solicitud`) y `13` (`/datxfono`) |
+| `Panel - Marisa` | **Basic Auth** | User: el `PANEL_USUARIO` · Password: el `PANEL_CLAVE` de tu `.env` | `15 · Panel de Marisa` (el navegador pide usuario y contraseña) |
 | `Modelo - Groq` | **OpenAI compatible** | La clave del proveedor (Groq, OpenRouter, Gemini…) y la URL base | `03 · Abonos a distancia` (extraer los datos del aviso), `06` y `14` (redactar el tono) |
 | `Gmail - Paso Firme` | **Gmail OAuth2** | La cuenta de Gmail de la tienda | Alternativa al SMTP para enviar |
 
@@ -77,12 +79,8 @@ los flujos**: está en [`data/config.csv`](../data/config.csv), un fichero de do
 | `EMAIL_TIENDA` | `tienda@pasofirme.example` | Remitente de los correos | `sub-notificar` |
 | `UMBRAL_VENTA_GRANDE` | `200` | A partir de qué importe se avisa de una venta | `04 · Aviso de venta grande` |
 | `DIAS_AVISO_VENCIMIENTO` | `7,1` | Cuántos días antes se avisa del vencimiento | `06 · Recordatorios y vencimientos` |
-| `WEBHOOK_TOKEN` | *(uno largo y aleatorio)* | El token que exige el webhook de la tienda | `00 · Despachador de eventos` |
+| `WEBHOOK_TOKEN_SHA256` | *(lo escribe `scripts/generar_secretos.py`)* | El hash SHA-256 del token del webhook: el token no está en el repositorio | `00 · Despachador de eventos` |
 | `TELEGRAM_ADMIN_ID` | *(vacío)* | El chat de Telegram de la tienda: solo ella pregunta por el negocio | `14 · Asistente de Telegram` |
-| `TELEGRAM_SECRET_TOKEN` | *(uno largo y aleatorio)* | El token que Telegram manda en cada update y n8n comprueba | `14 · Asistente de Telegram` |
-| `WEBHOOK_TOKEN` | *(uno largo y aleatorio)* | El token que exige el webhook de la tienda | `00 · Despachador de eventos` |
-| `TELEGRAM_ADMIN_ID` | *(vacío)* | El chat de Telegram de la tienda: solo ella pregunta por el negocio | `14 · Asistente de Telegram` |
-| `TELEGRAM_SECRET_TOKEN` | *(uno largo y aleatorio)* | El token que Telegram manda en cada update y n8n comprueba | `14 · Asistente de Telegram` |
 
 > **Por qué un fichero y no las variables de n8n.** En la edición comunitaria de n8n, *Settings →
 > Variables* no existe (es una función de pago: `Your license does not allow for
@@ -103,29 +101,27 @@ notepad data/config.csv
 
 ### El token del webhook
 
-El token va en dos sitios y tienen que coincidir:
+El token (`WEBHOOK_TOKEN`) vive en el `.env`, que no se sube. En el repositorio solo está su hash:
 
 | Dónde | Cómo |
 |---|---|
-| `data/config.csv` | La clave `WEBHOOK_TOKEN` |
-| `.env` (la app) | `N8N_WEBHOOK_URL=http://n8n:5678/webhook/tienda?token=<el mismo token>` |
+| `.env` | `WEBHOOK_TOKEN=<el token>` y `N8N_WEBHOOK_URL=http://n8n:5678/webhook/tienda?token=<el mismo token>` |
+| `data/config.csv` | `WEBHOOK_TOKEN_SHA256`: el hash SHA-256 del token |
+| n8n | La credencial `Webhooks - Tienda` (cabecera `X-Webhook-Token` con el mismo token) |
+
+`python scripts/generar_secretos.py` genera el token, lo pone en el `.env` y escribe el hash en
+`data/config.csv` (con `--rotar` cambia todos los secretos, por ejemplo si se han filtrado).
 
 La app no puede mandar cabeceras propias (su `services/n8n.py` solo pone `Content-Type`), así que
-el token viaja en la URL. El despachador lo acepta ahí o en la cabecera `X-Webhook-Token`, y
-responde **401** si no llega o no coincide.
+el token viaja en la URL. El despachador calcula el hash de lo que recibe (en la query o en la
+cabecera `X-Webhook-Token`), lo compara con `WEBHOOK_TOKEN_SHA256` y responde **401** si no
+coincide. Para calcular el hash, el nodo Code necesita el módulo `crypto`:
+`NODE_FUNCTION_ALLOW_BUILTIN=crypto` en el `docker-compose.yml` (y en `deploy/Dockerfile.n8n`).
 
-### El token del webhook
-
-El token va en dos sitios y tienen que coincidir:
-
-| Dónde | Cómo |
-|---|---|
-| `data/config.csv` | La clave `WEBHOOK_TOKEN` |
-| `.env` (la app) | `N8N_WEBHOOK_URL=http://n8n:5678/webhook/tienda?token=<el mismo token>` |
-
-La app no puede mandar cabeceras propias (su `services/n8n.py` solo pone `Content-Type`), así que
-el token viaja en la URL. El despachador lo acepta ahí o en la cabecera `X-Webhook-Token`, y
-responde **401** si no llega o no coincide.
+Los demás webhooks que escriben en la tienda (`/abonos-distancia`, `/confirmar-solicitud` y
+`/datxfono`) usan la autenticación del propio nodo Webhook con la credencial `Webhooks - Tienda`,
+y el panel (`/panel`) pide usuario y contraseña con `Panel - Marisa`. El formulario de los
+clientes (`/apartar-zapatos`) es público a propósito.
 
 ## 3. Variables de entorno (fuera de n8n)
 
@@ -134,7 +130,10 @@ Van en el `.env` de la raíz del proyecto, que **nunca** se sube al repositorio.
 | Variable | Para qué | Dónde la lee |
 |---|---|---|
 | `API_KEY` | La clave que la app exige en la cabecera `X-API-Key` | La app (y la credencial `Tienda - API` de n8n) |
-| `N8N_WEBHOOK_URL` | A dónde avisa la app: `http://n8n:5678/webhook/tienda` | La app |
+| `N8N_WEBHOOK_URL` | A dónde avisa la app: `http://n8n:5678/webhook/tienda?token=<WEBHOOK_TOKEN>` | La app |
+| `WEBHOOK_TOKEN` | El token de los webhooks (el mismo que va en la URL de arriba y en `Webhooks - Tienda`) | `scripts/generar_secretos.py` y las pruebas |
+| `TELEGRAM_SECRET_TOKEN` | El secreto que Telegram manda en cada update (el de `Telegram - Token del bot`) | `scripts/conectar_bot_telegram.sh` y el mock |
+| `PANEL_USUARIO` / `PANEL_CLAVE` | El usuario y la contraseña del panel (los de `Panel - Marisa`) | Las pruebas |
 | `SEED` | `1` carga los datos de ejemplo, `0` arranca vacía | La app |
 | `TZ` / `GENERIC_TIMEZONE` | `Europe/Madrid` | Los dos contenedores |
 

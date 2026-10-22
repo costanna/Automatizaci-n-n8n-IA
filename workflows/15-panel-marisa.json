@@ -6,7 +6,8 @@
         "httpMethod": "GET",
         "path": "panel",
         "responseMode": "responseNode",
-        "options": {}
+        "options": {},
+        "authentication": "basicAuth"
       },
       "id": "e5000001-0000-4000-8000-000000000001",
       "name": "Ver el panel",
@@ -16,7 +17,13 @@
         -900,
         300
       ],
-      "notes": "El panel de Marisa: http://localhost:5678/webhook/panel"
+      "notes": "El panel de Marisa: http://localhost:5678/webhook/panel",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "qppaIJSOewdvH03w",
+          "name": "Panel - Marisa"
+        }
+      }
     },
     {
       "parameters": {

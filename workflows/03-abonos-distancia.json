@@ -30,7 +30,8 @@
         "httpMethod": "POST",
         "path": "abonos-distancia",
         "responseMode": "onReceived",
-        "options": {}
+        "options": {},
+        "authentication": "headerAuth"
       },
       "id": "90b62c0a-cdaf-4a21-a472-bf5b54caf2a6",
       "name": "Entrada manual",
@@ -41,7 +42,13 @@
         420
       ],
       "webhookId": "97aa8963-3ae2-4008-b764-90eb04253632",
-      "notes": "Para probar sin correo: se pega el texto del aviso en {texto, asunto}."
+      "notes": "Para probar sin correo: se pega el texto del aviso en {texto, asunto}.",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "HhbFRoXvOHGcQ16w",
+          "name": "Webhooks - Tienda"
+        }
+      }
     },
     {
       "parameters": {

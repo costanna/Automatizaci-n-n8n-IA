@@ -47,6 +47,8 @@ fecha,hora,importe,tarjeta,concepto
 
 ## Reglas
 
+- **La importación a mano (`POST /webhook/datxfono`) va protegida** con la cabecera
+  `X-Webhook-Token` (credencial `Webhooks - Tienda`): sin ella, n8n responde 403.
 - **No se duplica nada**: la clave de cobro se guarda entre ejecuciones y además se compara con
   lo que ya tiene la tienda.
 - Los importes del CSV pueden venir en formato español (`1.842,30`) o inglés (`89.90`): se

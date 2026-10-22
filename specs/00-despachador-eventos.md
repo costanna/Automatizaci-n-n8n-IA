@@ -44,9 +44,11 @@ Eventos posibles: `apartado.creado`, `abono.registrado`, `venta.registrada`, `ap
 - La respuesta al webhook es inmediata: n8n contesta `200` en cuanto acepta el evento, sin esperar
   a los subflujos. Para eso, el nodo Webhook usa **Respond Immediately** y el trabajo real se
   hace en ramas aparte.
-- R-A7: el webhook **exige autenticación**: el token `WEBHOOK_TOKEN` de `data/config.csv`, en la
-  query (`?token=...`, que es como lo manda la app, porque no puede poner cabeceras propias) o
-  en la cabecera `X-Webhook-Token`. Sin él, responde `401` y no se ejecuta nada.
+- R-A7: el webhook **exige autenticación**: el token `WEBHOOK_TOKEN` del `.env`, en la query
+  (`?token=...`, que es como lo manda la app, porque no puede poner cabeceras propias) o en la
+  cabecera `X-Webhook-Token`. En `data/config.csv` no está el token sino su hash
+  (`WEBHOOK_TOKEN_SHA256`): *Comprobar el token* calcula el SHA-256 de lo recibido y lo compara en
+  tiempo constante. Sin token válido, responde `401` y no se ejecuta nada.
 
 ## Casos de error
 

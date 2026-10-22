@@ -42,6 +42,10 @@ El `.dockerignore` deja fuera el resto de `data/` (los correos enviados y los av
 
 - **Cambiar la configuración en la nube** (el umbral, los correos…) es un commit y un nuevo
   despliegue (`autoDeploy` está apagado): la imagen lleva el `config.csv` del repositorio.
+- **El token del webhook**: el `WEBHOOK_TOKEN_SHA256` de `config.csv` tiene que ser el hash del
+  token que use la app en la nube (`N8N_WEBHOOK_URL=...?token=<token>`). Lo más sencillo es usar
+  el mismo `WEBHOOK_TOKEN` que en tu `.env`; si quieres uno distinto para la nube, genera el
+  nuevo con `python scripts/generar_secretos.py --rotar` antes de desplegar.
 
 ### Los tres pasos que se olvidan
 
