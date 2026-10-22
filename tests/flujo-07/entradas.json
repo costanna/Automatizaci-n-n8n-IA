@@ -1,0 +1,39 @@
+{
+  "flujo": "07 · Informe mensual",
+  "disparador": "Schedule Trigger (dia 1 de cada mes, Europe/Madrid)",
+  "prueba": "python scripts/probar_flujos.py --flujo 7 (con N8N_EMAIL y N8N_PASSWORD)",
+  "entrada": {
+    "hoy": "2026-10-01",
+    "rango": { "desde": "2026-09-01", "hasta": "2026-09-30" },
+    "de_donde_salen_las_cifras": {
+      "ventas_directas": "suma de GET /api/ventas?desde=2026-09-01&hasta=2026-09-30",
+      "abonos": "suma de GET /api/abonos?desde=2026-09-01&hasta=2026-09-30",
+      "pendiente": "suma de 'pendiente' de los apartados activos (GET /api/apartados)",
+      "nuevos": "apartados con 'fecha' dentro del mes",
+      "vencidos": "vales con 'fecha' dentro del mes (GET /api/vales)"
+    }
+  },
+  "resultado_esperado": {
+    "email_enviado_a": "marisa@pasofirme.example",
+    "asunto": "Informe mensual · septiembre de 2026",
+    "debe_contener": [
+      "2026-09-01 a 2026-09-30",
+      "Ventas directas: <suma de las ventas> EUR",
+      "Abonos de apartados: <suma de los abonos> EUR",
+      "Total recaudado: <ventas + abonos> EUR",
+      "Total por cobrar: <suma del pendiente> EUR",
+      "Nuevos: <n>",
+      "Liquidados:",
+      "Vencidos:"
+    ],
+    "regla": "Todos los importes coinciden con los de la API; el flujo solo los suma"
+  },
+  "mes_vacio": {
+    "entrada": { "hoy": "2026-01-01", "ventas": [], "abonos": [] },
+    "resultado_esperado": {
+      "email_enviado_a": "marisa@pasofirme.example",
+      "debe_contener": ["Ventas directas: 0,00 EUR", "Abonos de apartados: 0,00 EUR", "Total recaudado: 0,00 EUR"],
+      "el_flujo_no_falla": true
+    }
+  }
+}

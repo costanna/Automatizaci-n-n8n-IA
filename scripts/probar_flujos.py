@@ -7,18 +7,26 @@ Comprueba el comportamiento que piden las historias de usuario:
   * Flujo 2: al abonar, el cliente recibe el recibo (y si se liquida, otro mensaje).
   * Flujo 3: los 9 correos de `data/correos/` se resuelven como dice la tabla del README.
   * Flujo 4: la venta grande avisa a Marisa y la pequena no.
+  * Flujo 6: recordatorios a 7 y 1 dias, y los fuera de plazo se vencen con su vale.
+  * Flujo 7: el informe mensual trae las cifras de la API.
   * Flujo 11: el apartado desde casa se solicita y se confirma.
   * Flujo 13: las ventas del datafono se importan y no se duplican.
+  * Flujo 14: el asistente de Telegram (cliente y tienda).
+  * Flujo 15: el panel de Marisa trae las cifras de la API.
 
 Para las pruebas hace falta:
   - la tienda y n8n levantados (`docker compose up -d`);
   - el servidor SMTP de desarrollo, para ver los correos que se envian:
         python scripts/smtp_desarrollo.py
   - el webhook de la app apuntando a n8n (el `.env` lo trae de serie).
+  - para los flujos 6 y 7 (programados): la cuenta de n8n en N8N_EMAIL y N8N_PASSWORD.
+    Se lanzan como el boton "Execute workflow" del editor, sin esperar a su hora.
+  - para el flujo 14: el mock de Telegram (`scripts/telegram_mock.py`, ver su ayuda).
 
 Uso:
-    python scripts/probar_flujos.py                 # todas las pruebas
+    python scripts/probar_flujos.py                 # flujos 1 a 4
     python scripts/probar_flujos.py --flujo 3       # solo el flujo 3
+    python scripts/probar_flujos.py --flujo 6       # los flujos 6, 7, 11, 13, 14 y 15 van de uno en uno
     python scripts/probar_flujos.py --listar        # ver los casos
 """
 
@@ -58,6 +66,9 @@ CLAVE = _clave_api()
 CARPETA_CORREOS = RAIZ / "data" / "correos"
 CARPETA_ENVIOS = RAIZ / "data" / "envios"
 ESPERA = float(os.getenv("ESPERA", "9"))
+TELEGRAM_MOCK = os.getenv("TELEGRAM_MOCK", "http://localhost:8081")
+# El chat de la tienda (TELEGRAM_ADMIN_ID en data/config.csv)
+CHAT_TIENDA = "999999"
 
 
 # ---------------------------------------------------------------- utilidades
@@ -198,6 +209,83 @@ def leer_correo(ruta: Path) -> tuple[str, str]:
         if not isinstance(cuerpo, str):
             cuerpo = ""
     return asunto, cuerpo
+
+
+def hoy_madrid():
+    """La fecha de hoy en Madrid, que es la que usan los flujos."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    return datetime.now(ZoneInfo("Europe/Madrid")).date()
+
+
+def euros(n) -> str:
+    """Los importes como los escriben los flujos: 1234,50 EUR."""
+    return f"{float(n):.2f}".replace(".", ",") + " EUR"
+
+
+def con_fecha(texto: str, iso: str) -> bool:
+    """La fecha sale en el texto como AAAA-MM-DD o como DD/MM/AAAA."""
+    anio, mes, dia = iso.split("-")
+    return iso in texto or f"{dia}/{mes}/{anio}" in texto
+
+
+def ejecutar_programado(nombre: str) -> str:
+    """Lanza un flujo programado ya, como el boton "Execute workflow" del editor.
+
+    Los flujos con Schedule Trigger no tienen webhook y `n8n execute` solo arranca
+    flujos con Execute Workflow Trigger, asi que se usa la API del editor con la
+    sesion de la cuenta de n8n. Devuelve el estado de la ejecucion.
+    """
+    import http.cookiejar
+
+    email, password = os.getenv("N8N_EMAIL"), os.getenv("N8N_PASSWORD")
+    if not email or not password:
+        return "faltan N8N_EMAIL y N8N_PASSWORD"
+    cabeceras = {"Content-Type": "application/json", "browser-id": "probar-flujos"}
+
+    def rest(metodo, ruta, cuerpo=None):
+        peticion = urllib.request.Request(
+            N8N + ruta, method=metodo, headers=cabeceras,
+            data=json.dumps(cuerpo).encode("utf-8") if cuerpo is not None else None)
+        with abridor.open(peticion, timeout=120) as r:
+            return json.loads(r.read() or b"{}").get("data")
+
+    galletas = http.cookiejar.CookieJar()
+    abridor = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(galletas))
+    rest("POST", "/rest/login", {"emailOrLdapLoginId": email, "password": password})
+    # La cookie de n8n es Secure y por http no se reenvia sola: se manda a mano.
+    cabeceras["Cookie"] = "n8n-auth=" + next(c.value for c in galletas if c.name == "n8n-auth")
+
+    flujo = next((f for f in rest("GET", "/rest/workflows") if f["name"] == nombre), None)
+    if not flujo:
+        return f"no existe el flujo '{nombre}' en n8n"
+    flujo = rest("GET", f"/rest/workflows/{flujo['id']}")
+    disparador = next(n["name"] for n in flujo["nodes"] if n["type"].endswith("scheduleTrigger"))
+    ejecucion = rest("POST", f"/rest/workflows/{flujo['id']}/run",
+                     {"workflowData": flujo, "triggerToStartFrom": {"name": disparador}})["executionId"]
+    for _ in range(90):
+        time.sleep(2)
+        datos = rest("GET", f"/rest/executions/{ejecucion}") or {}
+        if datos.get("status") in ("success", "error", "crashed", "canceled"):
+            return datos["status"]
+    return "no ha terminado en 3 minutos"
+
+
+def telegram(chat: str, texto: str, nombre: str = "Cliente") -> list[str]:
+    """Escribe al bot por el mock de Telegram y devuelve lo que contesta a ese chat."""
+    def llamar(ruta, cuerpo=None):
+        peticion = urllib.request.Request(
+            TELEGRAM_MOCK + ruta, method="POST" if cuerpo is not None else "GET",
+            data=json.dumps(cuerpo, ensure_ascii=False).encode("utf-8") if cuerpo is not None else None,
+            headers={"Content-Type": "application/json; charset=utf-8"})
+        with urllib.request.urlopen(peticion, timeout=60) as r:
+            return json.loads(r.read())
+
+    antes = len(llamar("/_enviados")["result"])
+    llamar("/_inyectar", {"chat_id": chat, "text": texto, "first_name": nombre})
+    time.sleep(ESPERA + 3)  # el modelo tarda un poco en redactar
+    return [m["text"] for m in llamar("/_enviados")["result"][antes:] if str(m["chat"]["id"]) == chat]
 
 
 class Resultado:
@@ -444,9 +532,211 @@ def probar_flujo_13(r: Resultado):
     r.comprobar(final == despues, f"la segunda vez no se duplica nada ({despues} -> {final})")
 
 
+def probar_flujo_6(r: Resultado):
+    """HU-06 y HU-07: recordatorios a 7 y 1 dias, y los fuera de plazo se vencen con su vale."""
+    from datetime import timedelta
+
+    print("\n== Flujo 6 · Recordatorios y vencimientos ==")
+    hoy = hoy_madrid()
+    # El plazo son 90 dias desde la fecha del apartado: con la fecha se elige cuantos faltan.
+    casos = {
+        "siete": 7,     # recordatorio "dentro de 7 dias"
+        "uno": 1,       # recordatorio "mañana"
+        "lejos": 30,    # no toca avisar
+        "vencido": -5,  # fuera de plazo: se vence y se genera el vale
+    }
+    creados = {}
+    for nombre, dias in casos.items():
+        st, a = api("POST", "/api/apartados", {
+            "cliente": f"Cliente Plazo {nombre.capitalize()}",
+            "email": f"prueba.plazo.{nombre}@example.com",
+            "producto": "Mocasín ante azul", "talla": "41", "precio": 60,
+            "abono_inicial": 10, "forma_pago": "efectivo",
+            "fecha": (hoy + timedelta(days=dias - 90)).isoformat(),
+        })
+        if not r.comprobar(st == 201, f"se crea el apartado que vence en {dias} dias (respuesta {st})"):
+            return
+        creados[nombre] = a
+    time.sleep(ESPERA)
+
+    antes = len(correos_enviados())
+    estado = ejecutar_programado("06 · Recordatorios y vencimientos")
+    if not r.comprobar(estado == "success", f"el flujo se ejecuta ({estado})"):
+        return
+    time.sleep(ESPERA)
+    nuevos = correos_enviados()[antes:]
+    para = lambda nombre: [c for c in nuevos if f"prueba.plazo.{nombre}@" in c["destinatario"]]
+
+    for nombre, cuando in (("siete", "7 días"), ("uno", "mañana")):
+        a, correos = creados[nombre], para(nombre)
+        r.comprobar(len(correos) == 1, f"el cliente cuyo plazo vence en {cuando} recibe un recordatorio ({len(correos)})")
+        if correos:
+            texto = correos[0]["texto"]
+            r.comprobar(euros(a["pendiente"]) in texto, f"el recordatorio ({cuando}) lleva lo que falta: {euros(a['pendiente'])}")
+            r.comprobar(con_fecha(texto, a["fecha_limite"]), f"el recordatorio ({cuando}) lleva la fecha limite")
+    r.comprobar(not para("lejos"), "a quien le quedan 30 dias no se le avisa")
+
+    _, vencido = api("GET", f"/api/apartados/{creados['vencido']['id']}")
+    vale = (vencido or {}).get("vale") or {}
+    r.comprobar(vencido.get("estado") == "vencido", "el apartado fuera de plazo queda vencido por API")
+    r.comprobar(bool(vale.get("codigo")), f"la app genera el vale ({vale.get('codigo', 'sin vale')})")
+    correos = para("vencido")
+    r.comprobar(len(correos) == 1, f"el cliente recibe un solo aviso del vale ({len(correos)})")
+    if correos and vale:
+        texto = correos[0]["texto"]
+        r.comprobar(vale["codigo"] in texto and euros(vale["importe"]) in texto,
+                    "el aviso lleva el codigo y el importe del vale")
+    r.comprobar(any(f"#{vencido.get('id')}" in c["texto"] and "vuelve" in c["texto"] for c in nuevos
+                    if "marisa@" in c["destinatario"] or "tienda@" in c["destinatario"]),
+                "la tienda recibe el par que vuelve a la venta")
+    # "Cada aviso una sola vez" se guarda en los datos estaticos del flujo, y n8n no los
+    # guarda en las ejecuciones manuales: se comprueba en produccion (tests/flujo-06/).
+
+
+def probar_flujo_7(r: Resultado):
+    """HU-08: el informe mensual trae las cifras de la API del mes anterior."""
+    from datetime import timedelta
+
+    print("\n== Flujo 7 · Informe mensual ==")
+    hoy = hoy_madrid()
+    hasta = hoy.replace(day=1) - timedelta(days=1)
+    desde = hasta.replace(day=1)
+    rango = f"desde={desde.isoformat()}&hasta={hasta.isoformat()}"
+    ventas = api("GET", f"/api/ventas?{rango}")[1]
+    abonos = api("GET", f"/api/abonos?{rango}")[1]
+    todos = apartados()
+    esperado = {
+        "Ventas directas": round(sum(v["importe"] for v in ventas), 2),
+        "Abonos de apartados": round(sum(a["importe"] for a in abonos), 2),
+        "Total recaudado": round(sum(v["importe"] for v in ventas) + sum(a["importe"] for a in abonos), 2),
+        "Total por cobrar": round(sum(a["pendiente"] for a in todos if a["estado"] == "activo"), 2),
+    }
+    nuevos_mes = sum(1 for a in todos if desde.isoformat() <= a["fecha"] <= hasta.isoformat())
+
+    antes = len(correos_enviados())
+    estado = ejecutar_programado("07 · Informe mensual")
+    if not r.comprobar(estado == "success", f"el flujo se ejecuta ({estado})"):
+        return
+    time.sleep(3)
+    informes = [c for c in correos_enviados()[antes:] if "Informe mensual" in c["asunto"]]
+    if not r.comprobar(len(informes) == 1 and "marisa@" in informes[0]["destinatario"],
+                       "Marisa recibe un informe"):
+        return
+    texto = informes[0]["texto"]
+    r.comprobar(f"{desde.isoformat()} a {hasta.isoformat()}" in texto,
+                f"el informe es del mes anterior ({desde.isoformat()} a {hasta.isoformat()})")
+    for etiqueta, importe in esperado.items():
+        r.comprobar(f"{etiqueta}: {euros(importe)}" in texto, f"{etiqueta}: {euros(importe)} (lo que da la API)")
+    r.comprobar(f"Nuevos: {nuevos_mes}" in texto, f"apartados nuevos del mes: {nuevos_mes}")
+    r.comprobar("Liquidados:" in texto and "Vencidos:" in texto, "trae los liquidados y los vencidos del mes")
+
+
+def probar_flujo_14(r: Resultado):
+    """HU-11 y HU-12: el asistente de Telegram, para el cliente y para la tienda."""
+    from datetime import timedelta
+
+    print("\n== Flujo 14 · Asistente de Telegram ==")
+    try:
+        urllib.request.urlopen(TELEGRAM_MOCK + "/_config", timeout=5)
+    except Exception:
+        r.comprobar(False, f"el mock de Telegram no responde en {TELEGRAM_MOCK}")
+        return
+
+    activos = [a for a in apartados() if a["estado"] == "activo" and a.get("telefono")]
+    cliente = activos[0]
+    otros = {a["cliente"] for a in activos if a["telefono"] != cliente["telefono"]}
+    # Un chat nuevo en cada prueba: el flujo recuerda el telefono de cada chat.
+    chat = str(int(time.time()) % 1000000 + 100000)
+
+    respuesta = " ".join(telegram(chat, "¿cuánto me falta?"))
+    r.comprobar("teléfono" in respuesta, "a un chat sin apuntar le pide el telefono")
+
+    # El modelo puede escribir "59,50 €" en vez de "59,50 EUR": lo que el flujo garantiza
+    # es el importe de la app, no la unidad.
+    importe = euros(cliente["pendiente"]).replace(" EUR", "")
+    respuesta = " ".join(telegram(chat, cliente["telefono"]))
+    r.comprobar(importe in respuesta, f"con el telefono, le dice lo que le falta: {importe}")
+    r.comprobar(con_fecha(respuesta, cliente["fecha_limite"]), "y su fecha limite")
+    r.comprobar(not any(nombre in respuesta for nombre in otros), "no le enseña apartados de otros clientes")
+
+    respuesta = " ".join(telegram(chat, "¿cuánto me falta por pagar?"))
+    r.comprobar(importe in respuesta and "teléfono" not in respuesta, "la siguiente vez ya no le pide el telefono")
+
+    respuesta = " ".join(telegram(chat, "¿cuánto se recaudó esta semana?"))
+    r.comprobar("Recaudado" not in respuesta and "Ventas directas" not in respuesta,
+                "a un cliente no le da las cifras de la tienda")
+
+    otro_chat = str(int(chat) + 1)
+    telegram(otro_chat, "¿cuánto me falta?")
+    respuesta = " ".join(telegram(otro_chat, "600 999 999"))
+    r.comprobar("EUR" not in respuesta and "no he encontrado" in respuesta.lower()
+                and "tienda" in respuesta.lower(),
+                "si no encuentra el telefono, lo dice, no da cifras y ofrece hablar con la tienda")
+
+    hoy = hoy_madrid()
+    pendiente = sum(a["pendiente"] for a in apartados() if a["estado"] == "activo")
+    fin_mes_pasado = hoy.replace(day=1) - timedelta(days=1)
+    for pregunta, desde, hasta in (
+            ("¿cuánto se recaudó esta semana?", hoy - timedelta(days=6), hoy),
+            ("¿cuánto se recaudó este mes?", hoy.replace(day=1), hoy),
+            ("¿cuánto se recaudó el mes pasado?", fin_mes_pasado.replace(day=1), fin_mes_pasado)):
+        rango = f"desde={desde.isoformat()}&hasta={hasta.isoformat()}"
+        recaudado = (sum(v["importe"] for v in api("GET", f"/api/ventas?{rango}")[1])
+                     + sum(a["importe"] for a in api("GET", f"/api/abonos?{rango}")[1]))
+        respuesta = " ".join(telegram(CHAT_TIENDA, pregunta, "Marisa"))
+        r.comprobar(f"Recaudado: {euros(recaudado)}" in respuesta,
+                    f"la tienda pregunta '{pregunta}': {euros(recaudado)} ({desde.isoformat()} a {hasta.isoformat()})")
+        r.comprobar(f"Pendiente de cobro: {euros(pendiente)}" in respuesta,
+                    f"y el pendiente de cobro: {euros(pendiente)}")
+
+
+def probar_flujo_15(r: Resultado):
+    """HU-15: el panel de Marisa trae las cifras de la API."""
+    print("\n== Flujo 15 · Panel de Marisa ==")
+    hoy = hoy_madrid().isoformat()
+    try:
+        with urllib.request.urlopen(N8N + "/webhook/panel?formato=json", timeout=60) as resp:
+            panel = json.loads(resp.read())
+    except Exception as e:
+        r.comprobar(False, f"el panel responde en JSON ({e})")
+        return
+    r.comprobar(panel.get("fecha") == hoy, f"el panel es de hoy ({panel.get('fecha')})")
+
+    todos = apartados()
+    activos = [a for a in todos if a["estado"] == "activo"]
+    resumen = api("GET", "/api/apartados/resumen")[1]
+    cobrado_hoy = (sum(v["importe"] for v in api("GET", f"/api/ventas?desde={hoy}&hasta={hoy}")[1])
+                   + sum(a["importe"] for a in api("GET", f"/api/abonos?desde={hoy}&hasta={hoy}")[1]))
+    mes = f"desde={hoy[:8]}01&hasta={hoy}"
+    del_mes = (sum(v["importe"] for v in api("GET", f"/api/ventas?{mes}")[1])
+               + sum(a["importe"] for a in api("GET", f"/api/abonos?{mes}")[1]))
+    pendiente = sum(a["pendiente"] for a in activos)
+
+    r.comprobar(abs(panel["hoy"]["total"] - cobrado_hoy) < 0.01, f"cobrado hoy: {euros(cobrado_hoy)}")
+    r.comprobar(abs(panel["mes"]["recaudacion"] - del_mes) < 0.01, f"recaudado este mes: {euros(del_mes)}")
+    r.comprobar(abs(panel["pendiente_cobro"] - pendiente) < 0.01, f"pendiente de cobro: {euros(pendiente)}")
+    r.comprobar(panel["apartados"]["activos"] == len(activos)
+                and panel["apartados"]["liquidados"] == resumen.get("liquidado")
+                and panel["apartados"]["vencidos"] == resumen.get("vencido"),
+                "apartados activos, liquidados y vencidos como en la app")
+    from datetime import date
+    esperados = sorted((a for a in activos
+                        if 0 <= (date.fromisoformat(a["fecha_limite"]) - date.fromisoformat(hoy)).days <= 30),
+                       key=lambda a: a["fecha_limite"])
+    r.comprobar([x["id"] for x in panel["por_vencer"]] == [a["id"] for a in esperados],
+                f"los que vencen en 30 dias, del mas cercano al mas lejano ({len(esperados)})")
+
+    with urllib.request.urlopen(N8N + "/webhook/panel?tema=oscuro", timeout=60) as resp:
+        html = resp.read().decode("utf-8")
+        r.comprobar("text/html" in resp.headers.get("Content-Type", ""), "el panel se sirve como pagina web")
+    r.comprobar(euros(pendiente) in html, "la pagina pinta el pendiente de cobro")
+    r.comprobar('data-tema="oscuro"' in html, "con ?tema=oscuro la pagina sale en oscuro")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Pruebas de los flujos de n8n")
-    ap.add_argument("--flujo", type=int, default=None, help="probar solo un flujo (1, 2, 3 o 4)")
+    ap.add_argument("--flujo", type=int, default=None,
+                    help="probar solo un flujo (1, 2, 3, 4, 6, 7, 11, 13, 14 o 15)")
     ap.add_argument("--caso", default=None, help="probar solo un caso del flujo 3 (nombre del fichero)")
     ap.add_argument("--listar", action="store_true", help="listar los casos del flujo 3")
     ap.add_argument("--sin-reset", action="store_true",
@@ -481,6 +771,14 @@ def main() -> int:
         probar_flujo_11(r)
     if args.flujo == 13:
         probar_flujo_13(r)
+    if args.flujo == 6:
+        probar_flujo_6(r)
+    if args.flujo == 7:
+        probar_flujo_7(r)
+    if args.flujo == 14:
+        probar_flujo_14(r)
+    if args.flujo == 15:
+        probar_flujo_15(r)
 
     print()
     print(f"Correos enviados durante las pruebas: {len(correos_enviados())} (en {CARPETA_ENVIOS})")

@@ -1,18 +1,18 @@
-﻿Reiniciando la tienda (datos de ejemplo limpios)...
+Reiniciando la tienda (datos de ejemplo limpios)...
   la tienda esta lista
 
-== Flujo 1 À Confirmacion de apartado ==
+== Flujo 1 · Confirmacion de apartado ==
   OK   se crea el apartado por API (respuesta 201)
   OK   el cliente recibe el mensaje de confirmacion
   OK   el mensaje lleva precio, abonado y pendiente
 
-== Flujo 2 À Recibo de abono ==
+== Flujo 2 · Recibo de abono ==
   OK   se registra el abono (respuesta 201)
   OK   el cliente recibe el recibo del abono
   OK   el recibo lleva el importe del abono
   OK   el recibo dice lo que queda pendiente
 
-== Flujo 3 À Abonos a distancia ==
+== Flujo 3 · Abonos a distancia ==
   OK   01_bizum_carmen.eml: se ha registrado el abono (nombre unico -> se registra)
   OK   02_bizum_jorge.eml: se ha registrado el abono (el concepto trae el numero de apartado -> se registra)
   OK   03_transferencia_lucia.eml: se ha registrado el abono (paga justo lo que falta -> se registra y liquida)
@@ -28,8 +28,103 @@
   OK   08_publicidad_banco.eml: se ignora en silencio (no se avisa a nadie)
   OK   09_bizum_silvia.eml: se ha registrado el abono (nombre unico -> se registra)
 
-== Flujo 4 À Aviso de venta grande ==
+== Flujo 4 · Aviso de venta grande ==
   OK   una venta por debajo del umbral no avisa
   OK   una venta por encima del umbral avisa a Marisa
 
-Correos enviados durante las pruebas: 44 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatizaci¾n\data\envios)
+Correos enviados durante las pruebas: 123 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
+Reiniciando la tienda (datos de ejemplo limpios)...
+  la tienda esta lista
+
+== Flujo 6 · Recordatorios y vencimientos ==
+  OK   se crea el apartado que vence en 7 dias (respuesta 201)
+  OK   se crea el apartado que vence en 1 dias (respuesta 201)
+  OK   se crea el apartado que vence en 30 dias (respuesta 201)
+  OK   se crea el apartado que vence en -5 dias (respuesta 201)
+  OK   el flujo se ejecuta (success)
+  OK   el cliente cuyo plazo vence en 7 días recibe un recordatorio (1)
+  OK   el recordatorio (7 días) lleva lo que falta: 50,00 EUR
+  OK   el recordatorio (7 días) lleva la fecha limite
+  OK   el cliente cuyo plazo vence en mañana recibe un recordatorio (1)
+  OK   el recordatorio (mañana) lleva lo que falta: 50,00 EUR
+  OK   el recordatorio (mañana) lleva la fecha limite
+  OK   a quien le quedan 30 dias no se le avisa
+  OK   el apartado fuera de plazo queda vencido por API
+  OK   la app genera el vale (VALE-00028)
+  OK   el cliente recibe un solo aviso del vale (1)
+  OK   el aviso lleva el codigo y el importe del vale
+  OK   la tienda recibe el par que vuelve a la venta
+
+Correos enviados durante las pruebas: 142 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
+Reiniciando la tienda (datos de ejemplo limpios)...
+  la tienda esta lista
+
+== Flujo 7 · Informe mensual ==
+  OK   el flujo se ejecuta (success)
+  OK   Marisa recibe un informe
+  OK   el informe es del mes anterior (2026-09-01 a 2026-09-30)
+  OK   Ventas directas: 3868,75 EUR (lo que da la API)
+  OK   Abonos de apartados: 289,00 EUR (lo que da la API)
+  OK   Total recaudado: 4157,75 EUR (lo que da la API)
+  OK   Total por cobrar: 587,15 EUR (lo que da la API)
+  OK   apartados nuevos del mes: 6
+  OK   trae los liquidados y los vencidos del mes
+
+Correos enviados durante las pruebas: 143 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
+Reiniciando la tienda (datos de ejemplo limpios)...
+  la tienda esta lista
+
+== Flujo 11 · Apartados desde casa ==
+  OK   el cliente envia la solicitud (respuesta 200)
+  OK   la tienda recibe el aviso de la solicitud
+  OK   el aviso lleva el codigo de la solicitud (SOL-0009)
+  OK   la tienda confirma la solicitud (respuesta 200)
+  OK   el apartado se crea en la app
+  OK   el abono inicial son 10 EUR
+  OK   el pendiente son 79,90 EUR
+
+Correos enviados durante las pruebas: 146 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
+Reiniciando la tienda (datos de ejemplo limpios)...
+  la tienda esta lista
+
+== Flujo 13 · Ventas del datafono ==
+  OK   se lanza la importacion
+  OK   se importan cobros nuevos (0 -> 3)
+  OK   se lanza la importacion otra vez
+  OK   la segunda vez no se duplica nada (3 -> 3)
+
+Correos enviados durante las pruebas: 147 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
+Reiniciando la tienda (datos de ejemplo limpios)...
+  la tienda esta lista
+
+== Flujo 14 · Asistente de Telegram ==
+  OK   a un chat sin apuntar le pide el telefono
+  OK   con el telefono, le dice lo que le falta: 59,50
+  OK   y su fecha limite
+  OK   no le enseña apartados de otros clientes
+  OK   la siguiente vez ya no le pide el telefono
+  OK   a un cliente no le da las cifras de la tienda
+  OK   si no encuentra el telefono, lo dice, no da cifras y ofrece hablar con la tienda
+  OK   la tienda pregunta '¿cuánto se recaudó esta semana?': 967,45 EUR (2026-10-16 a 2026-10-22)
+  OK   y el pendiente de cobro: 587,15 EUR
+  OK   la tienda pregunta '¿cuánto se recaudó este mes?': 2400,75 EUR (2026-10-01 a 2026-10-22)
+  OK   y el pendiente de cobro: 587,15 EUR
+  OK   la tienda pregunta '¿cuánto se recaudó el mes pasado?': 4157,75 EUR (2026-09-01 a 2026-09-30)
+  OK   y el pendiente de cobro: 587,15 EUR
+
+Correos enviados durante las pruebas: 147 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
+Reiniciando la tienda (datos de ejemplo limpios)...
+  la tienda esta lista
+
+== Flujo 15 · Panel de Marisa ==
+  OK   el panel es de hoy (2026-10-22)
+  OK   cobrado hoy: 213,65 EUR
+  OK   recaudado este mes: 2400,75 EUR
+  OK   pendiente de cobro: 587,15 EUR
+  OK   apartados activos, liquidados y vencidos como en la app
+  OK   los que vencen en 30 dias, del mas cercano al mas lejano (4)
+  OK   el panel se sirve como pagina web
+  OK   la pagina pinta el pendiente de cobro
+  OK   con ?tema=oscuro la pagina sale en oscuro
+
+Correos enviados durante las pruebas: 147 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)

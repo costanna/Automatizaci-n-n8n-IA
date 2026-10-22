@@ -1,0 +1,62 @@
+{
+  "flujo": "14 · Asistente de Telegram",
+  "disparador": "Webhook POST /webhook/telegram con la cabecera X-Telegram-Bot-Api-Secret-Token",
+  "prueba": "python scripts/probar_flujos.py --flujo 14 (con scripts/telegram_mock.py en marcha)",
+  "configuracion": { "TELEGRAM_ADMIN_ID": "999999" },
+  "casos": [
+    {
+      "caso": "Cliente sin apuntar",
+      "entrada": { "chat_id": "555001", "text": "¿cuánto me falta?" },
+      "resultado_esperado": { "debe_contener": ["teléfono"], "no_debe_contener": ["EUR"] }
+    },
+    {
+      "caso": "El cliente da su telefono",
+      "entrada": { "chat_id": "555001", "text": "600 000 016" },
+      "apartado_en_la_api": { "cliente": "Paula Ramos", "telefono": "600 000 016", "pendiente": 59.5, "fecha_limite": "<la de la API>" },
+      "resultado_esperado": {
+        "debe_contener": ["59,50", "<la fecha limite, DD/MM/AAAA>"],
+        "no_debe_contener": ["los nombres de otros clientes"]
+      }
+    },
+    {
+      "caso": "El mismo chat vuelve a preguntar",
+      "entrada": { "chat_id": "555001", "text": "¿cuánto me falta por pagar?" },
+      "resultado_esperado": {
+        "debe_contener": ["59,50"],
+        "no_debe_contener": ["teléfono"],
+        "nota": "El modelo puede escribir '59,50 €': se exige el importe de la app, no la unidad"
+      }
+    },
+    {
+      "caso": "Un cliente pregunta por el negocio",
+      "entrada": { "chat_id": "555001", "text": "¿cuánto se recaudó esta semana?" },
+      "resultado_esperado": { "no_debe_contener": ["Recaudado", "Ventas directas"] }
+    },
+    {
+      "caso": "Telefono que no existe",
+      "entrada": { "chat_id": "555002", "text": "600 999 999" },
+      "resultado_esperado": { "no_debe_contener": ["EUR"], "debe_contener": ["tienda"] }
+    },
+    {
+      "caso": "La tienda pregunta por la semana",
+      "entrada": { "chat_id": "999999", "text": "¿cuánto se recaudó esta semana?", "hoy": "2026-10-22" },
+      "resultado_esperado": {
+        "periodo": { "desde": "2026-10-16", "hasta": "2026-10-22" },
+        "debe_contener": ["Recaudado: <ventas + abonos de esos 7 dias> EUR", "Pendiente de cobro: <suma del pendiente> EUR"]
+      }
+    },
+    {
+      "caso": "La tienda pregunta por este mes",
+      "entrada": { "chat_id": "999999", "text": "¿cuánto se recaudó este mes?", "hoy": "2026-10-22" },
+      "resultado_esperado": {
+        "periodo": { "desde": "2026-10-01", "hasta": "2026-10-22" },
+        "debe_contener": ["Recaudado: <ventas + abonos del 1 al 22 de octubre> EUR"]
+      }
+    },
+    {
+      "caso": "La tienda pregunta por el mes pasado",
+      "entrada": { "chat_id": "999999", "text": "¿cuánto se recaudó el mes pasado?", "hoy": "2026-10-22" },
+      "resultado_esperado": { "periodo": { "desde": "2026-09-01", "hasta": "2026-09-30" } }
+    }
+  ]
+}

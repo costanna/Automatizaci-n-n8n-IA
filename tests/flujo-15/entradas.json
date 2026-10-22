@@ -1,0 +1,32 @@
+{
+  "flujo": "15 · Panel de Marisa",
+  "disparador": "Webhook GET /webhook/panel",
+  "prueba": "python scripts/probar_flujos.py --flujo 15",
+  "entrada": {
+    "hoy": "2026-10-22",
+    "de_donde_salen_las_cifras": {
+      "cobrado_hoy": "ventas + abonos de hoy (GET /api/ventas y /api/abonos)",
+      "recaudado_este_mes": "ventas + abonos del dia 1 a hoy",
+      "pendiente_cobro": "suma de 'pendiente' de los apartados activos",
+      "apartados": "activos de GET /api/apartados; liquidados y vencidos de GET /api/apartados/resumen",
+      "por_vencer": "activos cuya fecha limite esta entre hoy y dentro de 30 dias"
+    }
+  },
+  "resultado_esperado": {
+    "json": {
+      "peticion": "GET /webhook/panel?formato=json",
+      "fecha": "2026-10-22",
+      "hoy.total": "<cobrado hoy>",
+      "mes.recaudacion": "<recaudado este mes>",
+      "pendiente_cobro": "<suma del pendiente>",
+      "apartados": { "activos": "<n>", "liquidados": "<resumen.liquidado>", "vencidos": "<resumen.vencido>" },
+      "por_vencer": "Ordenados del que vence antes al que vence despues"
+    },
+    "html": {
+      "peticion": "GET /webhook/panel?tema=oscuro",
+      "content_type": "text/html",
+      "debe_contener": ["<pendiente de cobro> EUR", "data-tema=\"oscuro\""]
+    },
+    "regla": "La clave de la API no sale nunca al navegador: el panel solo devuelve sus datos"
+  }
+}
