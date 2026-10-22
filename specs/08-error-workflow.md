@@ -53,14 +53,20 @@ Aviso a la tienda con:
 
 ## Cómo se conecta
 
-Este flujo **no** se activa solo: hay que activarlo como *Error Workflow*.
+Este flujo **no** se activa solo: los demás flujos tienen que tenerlo como *Error Workflow*.
 
 1. Importar este flujo y **publicarlo** (Publish).
-2. En cada flujo que deba avisar: *Settings → Error Workflow → 08 · Avisos de error*.
-3. Comprobarlo: en cualquier flujo, *Execute workflow* con un nodo que falle a propósito
-   (p. ej. `Code` con `throw new Error('prueba')`) y mirar si a Marisa le llega el aviso.
+2. Todos los demás flujos lo llevan en sus ajustes (`settings.errorWorkflow` en el JSON, que en
+   el editor es *Settings → Error Workflow → 08 · Avisos de error*). En otra instancia de n8n,
+   `scripts/enlazar_flujos.py` lo vuelve a apuntar al id que tenga allí el 08.
+3. n8n **solo** lo dispara en ejecuciones de producción (un webhook o un programado), no al
+   pulsar *Execute workflow* en el editor.
 
 ## Datos de prueba
 
 `tests/flujo-08/entradas.json` — un error simulado con un texto que contiene un token falso, para
 comprobar que se limpia.
+
+`python scripts/probar_flujos.py --flujo 8` provoca un fallo de verdad: para la tienda, abre el
+panel (que no puede consultar la API) y comprueba que a Marisa le llega el aviso con el flujo, el
+paso, la fecha y la hora, y sin la clave de la API. Después vuelve a arrancar la tienda.

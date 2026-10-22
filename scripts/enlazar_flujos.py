@@ -198,6 +198,14 @@ def enlazar(flujo: dict, ids_flujos: dict[str, str], ids_cred: dict[str, str]) -
             if real and cred.get("id") != real:
                 nodo["credentials"][tipo] = {"id": real, "name": nombre}
                 cambios = True
+    # Todos los flujos avisan de sus errores con el 08 (Settings -> Error workflow).
+    # Sin esto, el Error Trigger del 08 no se dispara nunca.
+    flujo_errores = ids_flujos.get(DESTINOS["PENDIENTE_ID_08"])
+    if flujo_errores and flujo.get("name") != DESTINOS["PENDIENTE_ID_08"]:
+        ajustes = flujo.setdefault("settings", {})
+        if ajustes.get("errorWorkflow") != flujo_errores:
+            ajustes["errorWorkflow"] = flujo_errores
+            cambios = True
     return cambios
 
 

@@ -9,6 +9,7 @@ Comprueba el comportamiento que piden las historias de usuario:
   * Flujo 4: la venta grande avisa a Marisa y la pequena no.
   * Flujo 6: recordatorios a 7 y 1 dias, y los fuera de plazo se vencen con su vale.
   * Flujo 7: el informe mensual trae las cifras de la API.
+  * Flujo 8: si un flujo falla (la tienda parada), la tienda recibe el aviso del error.
   * Flujo 11: el apartado desde casa se solicita y se confirma.
   * Flujo 13: las ventas del datafono se importan y no se duplican.
   * Flujo 14: el asistente de Telegram (cliente y tienda).
@@ -26,7 +27,7 @@ Para las pruebas hace falta:
 Uso:
     python scripts/probar_flujos.py                 # flujos 1 a 4
     python scripts/probar_flujos.py --flujo 3       # solo el flujo 3
-    python scripts/probar_flujos.py --flujo 6       # los flujos 6, 7, 11, 13, 14 y 15 van de uno en uno
+    python scripts/probar_flujos.py --flujo 6       # los flujos 6, 7, 8, 11, 13, 14 y 15 van de uno en uno
     python scripts/probar_flujos.py --listar        # ver los casos
 """
 
@@ -662,6 +663,8 @@ def probar_flujo_14(r: Resultado):
     respuesta = " ".join(telegram(chat, "¿cuánto me falta por pagar?"))
     r.comprobar(importe in respuesta and "teléfono" not in respuesta, "la siguiente vez ya no le pide el telefono")
 
+    r.comprobar("sent automatically with" not in respuesta, "los mensajes no llevan el pie de n8n")
+
     respuesta = " ".join(telegram(chat, "¿cuánto se recaudó esta semana?"))
     r.comprobar("Recaudado" not in respuesta and "Ventas directas" not in respuesta,
                 "a un cliente no le da las cifras de la tienda")
@@ -688,6 +691,40 @@ def probar_flujo_14(r: Resultado):
                     f"la tienda pregunta '{pregunta}': {euros(recaudado)} ({desde.isoformat()} a {hasta.isoformat()})")
         r.comprobar(f"Pendiente de cobro: {euros(pendiente)}" in respuesta,
                     f"y el pendiente de cobro: {euros(pendiente)}")
+
+
+def probar_flujo_8(r: Resultado):
+    """HU-05: si un flujo falla, la tienda recibe el aviso con el flujo, el paso y el error."""
+    import subprocess
+
+    print("\n== Flujo 8 · Avisos de error ==")
+    # Un fallo de verdad: con la tienda parada, el panel no puede consultar la API.
+    # (El Error Workflow solo salta en ejecuciones de produccion, no en las manuales.)
+    antes = len(correos_enviados())
+    subprocess.run(["docker", "compose", "stop", "tienda"], cwd=RAIZ, capture_output=True, timeout=120)
+    try:
+        try:
+            urllib.request.urlopen(N8N + "/webhook/panel", timeout=60)
+        except Exception:
+            pass
+        time.sleep(ESPERA)
+    finally:
+        subprocess.run(["docker", "compose", "start", "tienda"], cwd=RAIZ, capture_output=True, timeout=120)
+    avisos = [c for c in correos_enviados()[antes:] if "marisa@" in c["destinatario"]]
+    if not r.comprobar(len(avisos) == 1, f"la tienda recibe un aviso del error ({len(avisos)})"):
+        return
+    texto = avisos[0]["asunto"] + "\n" + avisos[0]["texto"]
+    r.comprobar("15 · Panel de Marisa" in texto, "el aviso dice que flujo ha fallado")
+    r.comprobar("Ventas del periodo" in texto, "el aviso dice en que paso (Ventas del periodo)")
+    r.comprobar(CLAVE not in texto, "el aviso no lleva la clave de la API")
+    r.comprobar(bool(re.search(r"Cuando: \d{2}/\d{2}/\d{4},? \d{2}:\d{2}", texto)),
+                "el aviso lleva la fecha y la hora (dia/mes/año hh:mm)")
+    for _ in range(40):
+        try:
+            api("GET", "/api/apartados/resumen")
+            break
+        except Exception:
+            time.sleep(1)
 
 
 def probar_flujo_15(r: Resultado):
@@ -736,7 +773,7 @@ def probar_flujo_15(r: Resultado):
 def main() -> int:
     ap = argparse.ArgumentParser(description="Pruebas de los flujos de n8n")
     ap.add_argument("--flujo", type=int, default=None,
-                    help="probar solo un flujo (1, 2, 3, 4, 6, 7, 11, 13, 14 o 15)")
+                    help="probar solo un flujo (1, 2, 3, 4, 6, 7, 8, 11, 13, 14 o 15)")
     ap.add_argument("--caso", default=None, help="probar solo un caso del flujo 3 (nombre del fichero)")
     ap.add_argument("--listar", action="store_true", help="listar los casos del flujo 3")
     ap.add_argument("--sin-reset", action="store_true",
@@ -773,6 +810,8 @@ def main() -> int:
         probar_flujo_13(r)
     if args.flujo == 6:
         probar_flujo_6(r)
+    if args.flujo == 8:
+        probar_flujo_8(r)
     if args.flujo == 7:
         probar_flujo_7(r)
     if args.flujo == 14:

@@ -160,7 +160,9 @@
         "operation": "sendMessage",
         "chatId": "={{ $json.chat_id }}",
         "text": "={{ $json.cuerpo }}",
-        "additionalFields": {},
+        "additionalFields": {
+          "appendAttribution": false
+        },
         "options": {}
       },
       "id": "767171d2-561f-4255-a524-ae16683878e5",
@@ -384,7 +386,8 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "errorWorkflow": "PWE9gL9wPSBm6ZHV"
   },
   "pinData": {},
   "active": false
