@@ -2,7 +2,7 @@
 
 import { api } from "../api.js";
 import { avisoDeLaDireccion, mostrarAviso, montarLayout } from "../layout.js";
-import { esc, euros, etiquetaEstado, icono, paginacion, plazo } from "../ui.js";
+import { esc, euros, etiquetaEstado, fecha, icono, paginacion, plazo } from "../ui.js";
 
 const principal = montarLayout("apartados");
 const params = new URLSearchParams(location.search);
@@ -20,7 +20,7 @@ function fila(a) {
     <td>${esc(a.producto)}${a.talla ? `<span class="sub">Talla ${esc(a.talla)}</span>` : ""}</td>
     <td class="num">${euros(a.precio)}</td>
     <td class="num"><strong>${euros(a.pendiente)}</strong></td>
-    <td>${esc(a.fecha_limite)}<span class="sub">${plazo(a)}</span></td>
+    <td>${fecha(a.fecha_limite)}<span class="sub">${plazo(a)}</span></td>
     <td>${etiquetaEstado(a.estado)}</td>
   </tr>`;
 }
