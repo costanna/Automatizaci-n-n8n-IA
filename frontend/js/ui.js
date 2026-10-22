@@ -32,6 +32,12 @@ export const euros = (n) => `${formato.format(n)} €`;
 const capitalizar = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 export const etiquetaEstado = (estado) => `<span class="badge badge-${esc(estado)}">${esc(capitalizar(estado))}</span>`;
 
+// La API da las fechas como "AAAA-MM-DD"; en pantalla se ven como día/mes/año.
+export const fecha = (iso) => {
+  const [anio, mes, dia] = String(iso ?? "").split("-");
+  return esc(dia && mes && anio ? `${dia.slice(0, 2)}/${mes}/${anio}` : iso);
+};
+
 // Días que faltan hasta una fecha "AAAA-MM-DD" (negativo si ya pasó)
 export function diasHasta(fecha) {
   const hoy = new Date();
