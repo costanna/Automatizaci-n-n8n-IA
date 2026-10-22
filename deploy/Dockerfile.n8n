@@ -11,7 +11,10 @@ WORKDIR /opt/paso-firme
 # Los flujos viajan en la imagen: al arrancar, se importan si la instancia está vacía.
 COPY workflows/ /opt/paso-firme/workflows/
 COPY deploy/arrancar_con_flujos.sh /opt/paso-firme/arrancar_con_flujos.sh
-RUN chmod +x /opt/paso-firme/arrancar_con_flujos.sh && chown -R node:node /opt/paso-firme
+# Los ficheros que leen los flujos, en /datos como en el docker-compose: la configuracion
+# (00, 04, 06, 14 y los subflujos), el CSV del datafono (13) y el Excel de la migracion (10).
+COPY data/config.csv data/datxfono.csv data/excel_actual_apartados.csv data/excel_actual_ventas.csv /datos/
+RUN chmod +x /opt/paso-firme/arrancar_con_flujos.sh && chown -R node:node /opt/paso-firme /datos
 
 USER node
 
@@ -21,6 +24,8 @@ ENV N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
 ENV GENERIC_TIMEZONE=Europe/Madrid
 ENV TZ=Europe/Madrid
 ENV N8N_DIAGNOSTICS_ENABLED=false
+# n8n 2.x solo deja leer ficheros de estas carpetas: sin esto, los flujos no pueden abrir /datos.
+ENV N8N_RESTRICT_FILE_ACCESS_TO=/datos;/home/node/.n8n-files
 
 EXPOSE 10000
 
