@@ -22,7 +22,7 @@
       },
       "resultado_esperado": {
         "email_enviado_a": "carmen@example.com",
-        "debe_contener": ["20,00 EUR", "59,90 EUR", "2027-01-18"],
+        "debe_contener": ["20,00 EUR", "59,90 EUR", "18/01/2027"],
         "no_debe_contener": ["puedes pasar por la tienda"]
       }
     },

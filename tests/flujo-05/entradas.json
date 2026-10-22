@@ -14,7 +14,7 @@
   },
   "resultado_esperado": {
     "email_enviado_a": "marisa@pasofirme.example",
-    "asunto": "Cierre de caja · 2026-10-20",
+    "asunto": "Cierre de caja · 20/10/2026",
     "ventas_directas": 86.4,
     "abonos": 25.0,
     "total": 111.4,

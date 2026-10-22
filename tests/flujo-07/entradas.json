@@ -17,7 +17,7 @@
     "email_enviado_a": "marisa@pasofirme.example",
     "asunto": "Informe mensual · septiembre de 2026",
     "debe_contener": [
-      "2026-09-01 a 2026-09-30",
+      "01/09/2026 a 30/09/2026",
       "Ventas directas: <suma de las ventas> EUR",
       "Abonos de apartados: <suma de los abonos> EUR",
       "Total recaudado: <ventas + abonos> EUR",

@@ -225,10 +225,15 @@ def euros(n) -> str:
     return f"{float(n):.2f}".replace(".", ",") + " EUR"
 
 
+def fecha_es(iso: str) -> str:
+    """Las fechas de los mensajes van como dia/mes/año: 2026-10-22 -> 22/10/2026."""
+    anio, mes, dia = str(iso)[:10].split("-")
+    return f"{dia}/{mes}/{anio}"
+
+
 def con_fecha(texto: str, iso: str) -> bool:
-    """La fecha sale en el texto como AAAA-MM-DD o como DD/MM/AAAA."""
-    anio, mes, dia = iso.split("-")
-    return iso in texto or f"{dia}/{mes}/{anio}" in texto
+    """La fecha sale en el texto como DD/MM/AAAA."""
+    return fecha_es(iso) in texto
 
 
 def ejecutar_programado(nombre: str) -> str:
@@ -339,6 +344,8 @@ def probar_flujo_1(r: Resultado):
         cuerpo = [c for c in nuevos if "prueba.confirmacion@example.com" in c["destinatario"]][0]["texto"]
         r.comprobar("89,90" in cuerpo and "10,00" in cuerpo and "79,90" in cuerpo,
                     "el mensaje lleva precio, abonado y pendiente")
+        r.comprobar(con_fecha(cuerpo, creado["fecha_limite"]),
+                    f"y la fecha limite en dia/mes/año ({fecha_es(creado['fecha_limite'])})")
     return creado
 
 
@@ -373,6 +380,7 @@ def probar_flujo_2(r: Resultado, apartado: dict | None):
         r.comprobar("15,00" in cuerpo, "el recibo lleva el importe del abono")
         r.comprobar("queda por pagar" in cuerpo.lower() or "Pendiente" in cuerpo,
                     "el recibo dice lo que queda pendiente")
+        r.comprobar(con_fecha(cuerpo, apartado["fecha_limite"]), "el recibo lleva la fecha limite en dia/mes/año")
 
 
 def probar_flujo_4(r: Resultado):
@@ -389,8 +397,10 @@ def probar_flujo_4(r: Resultado):
     api("POST", "/api/ventas", {"concepto": "Venta grande de prueba", "importe": 250, "forma_pago": "tarjeta"})
     time.sleep(ESPERA)
     nuevos = correos_enviados()[antes:]
-    r.comprobar(any("Venta grande" in c["asunto"] for c in nuevos),
-                "una venta por encima del umbral avisa a Marisa")
+    grandes = [c for c in nuevos if "Venta grande" in c["asunto"]]
+    r.comprobar(bool(grandes), "una venta por encima del umbral avisa a Marisa")
+    if grandes:
+        r.comprobar(con_fecha(grandes[0]["texto"], hoy_madrid().isoformat()), "el aviso lleva la fecha en dia/mes/año")
 
 
 CASOS_FLUJO_3 = [
@@ -624,8 +634,8 @@ def probar_flujo_7(r: Resultado):
                        "Marisa recibe un informe"):
         return
     texto = informes[0]["texto"]
-    r.comprobar(f"{desde.isoformat()} a {hasta.isoformat()}" in texto,
-                f"el informe es del mes anterior ({desde.isoformat()} a {hasta.isoformat()})")
+    rango_es = f"{fecha_es(desde.isoformat())} a {fecha_es(hasta.isoformat())}"
+    r.comprobar(rango_es in texto, f"el informe es del mes anterior ({rango_es})")
     for etiqueta, importe in esperado.items():
         r.comprobar(f"{etiqueta}: {euros(importe)}" in texto, f"{etiqueta}: {euros(importe)} (lo que da la API)")
     r.comprobar(f"Nuevos: {nuevos_mes}" in texto, f"apartados nuevos del mes: {nuevos_mes}")

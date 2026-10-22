@@ -14,8 +14,8 @@
   },
   "resultado_esperado": {
     "recordatorios": [
-      { "para": "prueba.plazo.siete@example.com", "asunto": "Tu apartado vence dentro de 7 días", "debe_contener": ["50,00", "2026-10-29"] },
-      { "para": "prueba.plazo.uno@example.com", "asunto": "Tu apartado vence mañana", "debe_contener": ["50,00", "2026-10-23"] }
+      { "para": "prueba.plazo.siete@example.com", "asunto": "Tu apartado vence dentro de 7 días", "debe_contener": ["50,00", "29/10/2026"] },
+      { "para": "prueba.plazo.uno@example.com", "asunto": "Tu apartado vence mañana", "debe_contener": ["50,00", "23/10/2026"] }
     ],
     "sin_aviso": ["prueba.plazo.lejos@example.com"],
     "vencimiento": {

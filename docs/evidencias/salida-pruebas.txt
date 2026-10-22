@@ -5,12 +5,14 @@ Reiniciando la tienda (datos de ejemplo limpios)...
   OK   se crea el apartado por API (respuesta 201)
   OK   el cliente recibe el mensaje de confirmacion
   OK   el mensaje lleva precio, abonado y pendiente
+  OK   y la fecha limite en dia/mes/año (20/01/2027)
 
 == Flujo 2 · Recibo de abono ==
   OK   se registra el abono (respuesta 201)
   OK   el cliente recibe el recibo del abono
   OK   el recibo lleva el importe del abono
   OK   el recibo dice lo que queda pendiente
+  OK   el recibo lleva la fecha limite en dia/mes/año
 
 == Flujo 3 · Abonos a distancia ==
   OK   01_bizum_carmen.eml: se ha registrado el abono (nombre unico -> se registra)
@@ -31,8 +33,9 @@ Reiniciando la tienda (datos de ejemplo limpios)...
 == Flujo 4 · Aviso de venta grande ==
   OK   una venta por debajo del umbral no avisa
   OK   una venta por encima del umbral avisa a Marisa
+  OK   el aviso lleva la fecha en dia/mes/año
 
-Correos enviados durante las pruebas: 161 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
+Correos enviados durante las pruebas: 197 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
 Reiniciando la tienda (datos de ejemplo limpios)...
   la tienda esta lista
 
@@ -55,14 +58,14 @@ Reiniciando la tienda (datos de ejemplo limpios)...
   OK   el aviso lleva el codigo y el importe del vale
   OK   la tienda recibe el par que vuelve a la venta
 
-Correos enviados durante las pruebas: 180 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
+Correos enviados durante las pruebas: 216 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
 Reiniciando la tienda (datos de ejemplo limpios)...
   la tienda esta lista
 
 == Flujo 7 · Informe mensual ==
   OK   el flujo se ejecuta (success)
   OK   Marisa recibe un informe
-  OK   el informe es del mes anterior (2026-09-01 a 2026-09-30)
+  OK   el informe es del mes anterior (01/09/2026 a 30/09/2026)
   OK   Ventas directas: 3868,75 EUR (lo que da la API)
   OK   Abonos de apartados: 289,00 EUR (lo que da la API)
   OK   Total recaudado: 4157,75 EUR (lo que da la API)
@@ -70,7 +73,7 @@ Reiniciando la tienda (datos de ejemplo limpios)...
   OK   apartados nuevos del mes: 6
   OK   trae los liquidados y los vencidos del mes
 
-Correos enviados durante las pruebas: 181 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
+Correos enviados durante las pruebas: 217 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
 Reiniciando la tienda (datos de ejemplo limpios)...
   la tienda esta lista
 
@@ -81,20 +84,20 @@ Reiniciando la tienda (datos de ejemplo limpios)...
   OK   el aviso no lleva la clave de la API
   OK   el aviso lleva la fecha y la hora (dia/mes/año hh:mm)
 
-Correos enviados durante las pruebas: 182 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
+Correos enviados durante las pruebas: 218 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
 Reiniciando la tienda (datos de ejemplo limpios)...
   la tienda esta lista
 
 == Flujo 11 · Apartados desde casa ==
   OK   el cliente envia la solicitud (respuesta 200)
   OK   la tienda recibe el aviso de la solicitud
-  OK   el aviso lleva el codigo de la solicitud (SOL-0010)
+  OK   el aviso lleva el codigo de la solicitud (SOL-0011)
   OK   la tienda confirma la solicitud (respuesta 200)
   OK   el apartado se crea en la app
   OK   el abono inicial son 10 EUR
   OK   el pendiente son 79,90 EUR
 
-Correos enviados durante las pruebas: 185 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
+Correos enviados durante las pruebas: 221 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
 Reiniciando la tienda (datos de ejemplo limpios)...
   la tienda esta lista
 
@@ -104,7 +107,7 @@ Reiniciando la tienda (datos de ejemplo limpios)...
   OK   se lanza la importacion otra vez
   OK   la segunda vez no se duplica nada (3 -> 3)
 
-Correos enviados durante las pruebas: 186 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
+Correos enviados durante las pruebas: 222 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
 Reiniciando la tienda (datos de ejemplo limpios)...
   la tienda esta lista
 
@@ -124,7 +127,7 @@ Reiniciando la tienda (datos de ejemplo limpios)...
   OK   la tienda pregunta '¿cuánto se recaudó el mes pasado?': 4157,75 EUR (2026-09-01 a 2026-09-30)
   OK   y el pendiente de cobro: 587,15 EUR
 
-Correos enviados durante las pruebas: 186 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
+Correos enviados durante las pruebas: 222 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
 Reiniciando la tienda (datos de ejemplo limpios)...
   la tienda esta lista
 
@@ -139,4 +142,4 @@ Reiniciando la tienda (datos de ejemplo limpios)...
   OK   la pagina pinta el pendiente de cobro
   OK   con ?tema=oscuro la pagina sale en oscuro
 
-Correos enviados durante las pruebas: 186 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
+Correos enviados durante las pruebas: 222 (en D:\-GEEK-\FACTORIA F5\IA\PROYECTOS\M1\Automatización\data\envios)
