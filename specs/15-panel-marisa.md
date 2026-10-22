@@ -55,8 +55,13 @@ Ninguna: el panel consulta la API de la tienda cada vez que se abre.
   puede tenerla abierta en el móvil.
 - **Tema claro y oscuro**: el panel arranca con el tema que tenga el sistema
   (`prefers-color-scheme`) y hay un interruptor en la cabecera para cambiarlo a mano. La
-  elección se guarda en el navegador (`localStorage`) y se aplica **antes de pintar la
-  página**, para que no haya destellos.
+  elección va en la dirección (`/webhook/panel?tema=oscuro` o `?tema=claro`): n8n sirve el
+  panel dentro de un *sandbox* (`Content-Security-Policy: sandbox` sin `allow-same-origin`)
+  donde `localStorage` no funciona, y así el refresco de cada minuto conserva el tema. Con
+  `?tema=` el tema lo pone n8n en el HTML; sin él, se aplica el del sistema **antes de pintar
+  la página**, para que no haya destellos.
+- **Aspecto de zapatería de barrio**: papel y cuero en el tema claro, nogal y caramelo en el
+  oscuro, toldo a rayas en la cabecera y los mismos colores que la app de la tienda.
 - R-A7: el panel no se lleva a ningún modelo ni a ningún servicio externo.
 
 ## Casos de error
