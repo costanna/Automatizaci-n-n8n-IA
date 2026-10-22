@@ -48,6 +48,9 @@ Ninguna: el panel consulta la API de la tienda cada vez que se abre.
 
 ## Reglas
 
+- **El panel pide usuario y contraseña** (Basic Auth, credencial `Panel - Marisa`): enseña
+  nombres de clientes e importes, así que no puede estar abierto. El navegador los pide la primera
+  vez y los recuerda; los enlaces del panel (`?tema=`, `?formato=json`) usan los mismos.
 - **La clave de la API no sale nunca al navegador**: n8n consulta la tienda y devuelve solo los
   datos del panel. El navegador no ve la `X-API-Key`.
 - Las cifras las calcula la app; el panel solo las suma y las pinta.

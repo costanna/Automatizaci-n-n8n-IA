@@ -14,6 +14,7 @@ Comprueba el comportamiento que piden las historias de usuario:
   * Flujo 13: las ventas del datafono se importan y no se duplican.
   * Flujo 14: el asistente de Telegram (cliente y tienda).
   * Flujo 15: el panel de Marisa trae las cifras de la API.
+  * Seguridad (--seguridad): sin credenciales, los webhooks que escriben y el panel se rechazan.
 
 Para las pruebas hace falta:
   - la tienda y n8n levantados (`docker compose up -d`);
@@ -49,21 +50,28 @@ API = os.getenv("API_URL", "http://localhost:8000")
 N8N = os.getenv("N8N_URL", "http://localhost:5678")
 
 
-def _clave_api() -> str:
-    """La clave de la API: la del entorno o, si no, la del .env del proyecto."""
-    clave = os.getenv("API_KEY")
-    if clave:
-        return clave
+def _del_env(nombre: str, defecto: str = "") -> str:
+    """Una variable del entorno o, si no esta, la del .env del proyecto."""
+    if os.getenv(nombre):
+        return os.getenv(nombre)
     env = pathlib.Path(__file__).resolve().parent.parent / ".env"
     if env.exists():
         for linea in env.read_text(encoding="utf-8").splitlines():
-            if linea.startswith("API_KEY="):
+            if linea.startswith(nombre + "="):
                 return linea.split("=", 1)[1].strip()
+    return defecto
+
+
+def _clave_api() -> str:
+    """La clave de la API: la del entorno o, si no, la del .env del proyecto."""
     # Sin .env: la clave de desarrollo por defecto (la de .env.example).
-    return "cambia-esta-clave"
+    return _del_env("API_KEY", "cambia-esta-clave")
 
 
 CLAVE = _clave_api()
+# Los webhooks que escriben en la tienda piden X-Webhook-Token; el panel, usuario y contraseña.
+WEBHOOK_TOKEN = _del_env("WEBHOOK_TOKEN")
+PANEL = (_del_env("PANEL_USUARIO"), _del_env("PANEL_CLAVE"))
 CARPETA_CORREOS = RAIZ / "data" / "correos"
 CARPETA_ENVIOS = RAIZ / "data" / "envios"
 ESPERA = float(os.getenv("ESPERA", "9"))
@@ -175,12 +183,19 @@ def correos_enviados() -> list[dict]:
     return salida
 
 
-def n8n_webhook(ruta: str, cuerpo: dict):
-    """Llama a un webhook de n8n y devuelve (codigo, cuerpo de la respuesta)."""
+def n8n_webhook(ruta: str, cuerpo: dict, token: str | None = None):
+    """Llama a un webhook de n8n y devuelve (codigo, cuerpo de la respuesta).
+
+    Lleva la cabecera X-Webhook-Token con el WEBHOOK_TOKEN del .env (token="" la quita).
+    """
+    cabeceras = {"Content-Type": "application/json"}
+    token = WEBHOOK_TOKEN if token is None else token
+    if token:
+        cabeceras["X-Webhook-Token"] = token
     peticion = urllib.request.Request(
         N8N + ruta,
         json.dumps(cuerpo, ensure_ascii=False).encode("utf-8"),
-        {"Content-Type": "application/json"},
+        cabeceras,
         method="POST",
     )
     try:
@@ -188,6 +203,27 @@ def n8n_webhook(ruta: str, cuerpo: dict):
             return r.status, r.read().decode("utf-8")[:200]
     except urllib.error.HTTPError as e:
         return e.code, ""
+
+
+def abrir_panel(ruta: str = "", credenciales: tuple[str, str] | None = None):
+    """Abre el panel con usuario y contraseña (Basic Auth); por defecto, los del .env."""
+    import base64
+
+    usuario, clave = PANEL if credenciales is None else credenciales
+    peticion = urllib.request.Request(N8N + "/webhook/panel" + ruta)
+    if usuario or clave:
+        par = base64.b64encode(f"{usuario}:{clave}".encode("utf-8")).decode("ascii")
+        peticion.add_header("Authorization", "Basic " + par)
+    return urllib.request.urlopen(peticion, timeout=60)
+
+
+def codigo_http(funcion) -> int:
+    """El codigo HTTP de una llamada (tambien si es un error)."""
+    try:
+        with funcion() as r:
+            return r.status
+    except urllib.error.HTTPError as e:
+        return e.code
 
 
 def leer_correo(ruta: Path) -> tuple[str, str]:
@@ -714,7 +750,7 @@ def probar_flujo_8(r: Resultado):
     subprocess.run(["docker", "compose", "stop", "tienda"], cwd=RAIZ, capture_output=True, timeout=120)
     try:
         try:
-            urllib.request.urlopen(N8N + "/webhook/panel", timeout=60)
+            abrir_panel()
         except Exception:
             pass
         time.sleep(ESPERA)
@@ -737,12 +773,47 @@ def probar_flujo_8(r: Resultado):
             time.sleep(1)
 
 
+def probar_seguridad(r: Resultado):
+    """HU-14: sin credenciales, los webhooks que escriben en la tienda y el panel se rechazan."""
+    print("\n== Seguridad de los webhooks ==")
+    rechazo = (401, 403)
+
+    st, _ = n8n_webhook("/webhook/tienda", {"evento": "prueba.seguridad", "datos": {}}, token="")
+    r.comprobar(st == 401, f"el webhook de la tienda sin token responde 401 ({st})")
+    st, _ = n8n_webhook("/webhook/tienda", {"evento": "prueba.seguridad", "datos": {}}, token="no-es-el-token")
+    r.comprobar(st == 401, f"el webhook de la tienda con un token falso responde 401 ({st})")
+
+    carmen = por_cliente("Carmen Ruiz")
+    asunto, cuerpo = leer_correo(CARPETA_CORREOS / "01_bizum_carmen.eml")
+    st, _ = n8n_webhook("/webhook/abonos-distancia", {"texto": cuerpo, "asunto": asunto}, token="")
+    r.comprobar(st in rechazo, f"un aviso del banco sin token se rechaza ({st})")
+    time.sleep(ESPERA)
+    despues = por_cliente("Carmen Ruiz")
+    r.comprobar(bool(carmen) and bool(despues) and despues["abonado"] == carmen["abonado"],
+                "y no se registra ningun abono")
+
+    st, _ = n8n_webhook("/webhook/confirmar-solicitud", {"codigo": "SOL-0001", "importe": 10}, token="")
+    r.comprobar(st in rechazo, f"confirmar una solicitud sin token se rechaza ({st})")
+    st, _ = n8n_webhook("/webhook/datxfono", {}, token="")
+    r.comprobar(st in rechazo, f"lanzar la importacion del datafono sin token se rechaza ({st})")
+
+    st = codigo_http(lambda: abrir_panel(credenciales=("", "")))
+    r.comprobar(st == 401, f"el panel sin usuario ni contraseña responde 401 ({st})")
+    st = codigo_http(lambda: abrir_panel(credenciales=(PANEL[0], "no-es-la-clave")))
+    r.comprobar(st in rechazo, f"el panel con una contraseña falsa se rechaza ({st})")
+    st = codigo_http(lambda: abrir_panel("?formato=json", credenciales=("", "")))
+    r.comprobar(st == 401, f"los datos del panel en JSON tampoco salen sin contraseña ({st})")
+
+    st = codigo_http(lambda: urllib.request.urlopen(N8N + "/webhook/apartar-zapatos", timeout=60))
+    r.comprobar(st == 200, f"el formulario de los clientes sigue abierto ({st})")
+
+
 def probar_flujo_15(r: Resultado):
     """HU-15: el panel de Marisa trae las cifras de la API."""
     print("\n== Flujo 15 · Panel de Marisa ==")
     hoy = hoy_madrid().isoformat()
     try:
-        with urllib.request.urlopen(N8N + "/webhook/panel?formato=json", timeout=60) as resp:
+        with abrir_panel("?formato=json") as resp:
             panel = json.loads(resp.read())
     except Exception as e:
         r.comprobar(False, f"el panel responde en JSON ({e})")
@@ -773,7 +844,7 @@ def probar_flujo_15(r: Resultado):
     r.comprobar([x["id"] for x in panel["por_vencer"]] == [a["id"] for a in esperados],
                 f"los que vencen en 30 dias, del mas cercano al mas lejano ({len(esperados)})")
 
-    with urllib.request.urlopen(N8N + "/webhook/panel?tema=oscuro", timeout=60) as resp:
+    with abrir_panel("?tema=oscuro") as resp:
         html = resp.read().decode("utf-8")
         r.comprobar("text/html" in resp.headers.get("Content-Type", ""), "el panel se sirve como pagina web")
     r.comprobar(euros(pendiente) in html, "la pagina pinta el pendiente de cobro")
@@ -786,6 +857,8 @@ def main() -> int:
                     help="probar solo un flujo (1, 2, 3, 4, 6, 7, 8, 11, 13, 14 o 15)")
     ap.add_argument("--caso", default=None, help="probar solo un caso del flujo 3 (nombre del fichero)")
     ap.add_argument("--listar", action="store_true", help="listar los casos del flujo 3")
+    ap.add_argument("--seguridad", action="store_true",
+                    help="comprobar que sin credenciales los webhooks y el panel se rechazan")
     ap.add_argument("--sin-reset", action="store_true",
                     help="no reiniciar la tienda antes de las pruebas")
     args = ap.parse_args()
@@ -805,6 +878,9 @@ def main() -> int:
     r = Resultado()
     if not args.sin_reset:
         reiniciar_tienda()
+    if args.seguridad:
+        probar_seguridad(r)
+        return 0 if not r.fallos else 1
     todo = args.flujo is None
     if todo or args.flujo == 1:
         apartado = probar_flujo_1(r)

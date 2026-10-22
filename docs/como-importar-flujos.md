@@ -96,9 +96,9 @@ recibe los updates, se los pasa a n8n y guarda las respuestas que el bot envía.
 
 ```bash
 # 1. el mock, diciendo a donde entrega los updates y con que token
+#    (el secreto lo lee de TELEGRAM_SECRET_TOKEN en el .env)
 python scripts/telegram_mock.py --puerto 8081 \
-    --url http://localhost:5678/webhook/telegram \
-    --secreto paso-firme-token-bot-2026
+    --url http://localhost:5678/webhook/telegram
 
 # 2. la credencial 'Telegram - Paso Firme' del bot, con la URL del mock
 #    (en n8n: Credentials -> Telegram - Paso Firme -> Base URL = http://host.docker.internal:8081)

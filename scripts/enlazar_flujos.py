@@ -69,6 +69,11 @@ CREDENCIALES_POR_NODO = {
     ("Responder en Telegram", "telegramApi"): "Telegram - Paso Firme",
     ("Correo del banco", "imap"): "Banco - IMAP",
     ("Modelo de lenguaje", "openAiApi"): "Modelo - Groq",
+    # Webhooks que escriben en la tienda: piden la cabecera X-Webhook-Token.
+    ("Entrada manual", "httpHeaderAuth"): "Webhooks - Tienda",
+    ("Confirmar solicitud", "httpHeaderAuth"): "Webhooks - Tienda",
+    ("Importar a mano", "httpHeaderAuth"): "Webhooks - Tienda",
+    ("Ver el panel", "httpBasicAuth"): "Panel - Marisa",
 }
 
 # Valor por defecto si el nodo no esta en la lista de arriba.
@@ -80,6 +85,7 @@ CREDENCIALES = {
     "imap": "Banco - IMAP",
     "openAiApi": "Modelo - Groq",
     "googleSheets": "Histórico - Sheets",
+    "httpBasicAuth": "Panel - Marisa",
 }
 
 

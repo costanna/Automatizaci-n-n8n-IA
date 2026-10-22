@@ -19,7 +19,8 @@ set -e
 
 TOKEN="${1:-}"
 URL="${2:-http://localhost:5678/webhook/telegram}"
-SECRETO="${3:-$(grep '^TELEGRAM_SECRET_TOKEN=' data/config.csv 2>/dev/null | cut -d, -f2-)}"
+# El secreto vive en el .env (no se sube a GitHub): lo genera scripts/generar_secretos.py.
+SECRETO="${3:-$(grep '^TELEGRAM_SECRET_TOKEN=' .env 2>/dev/null | cut -d= -f2- | tr -d '\r')}"
 
 if [ -z "$TOKEN" ]; then
   echo "Uso: $0 <token-del-bot> [url-n8n] [secreto]" >&2
@@ -27,7 +28,7 @@ if [ -z "$TOKEN" ]; then
 fi
 
 if [ -z "$SECRETO" ]; then
-  echo "Falta el token secreto: ponlo en el tercer argumento o en data/config.csv (TELEGRAM_SECRET_TOKEN)" >&2
+  echo "Falta el token secreto: ponlo en el tercer argumento o en el .env (TELEGRAM_SECRET_TOKEN)" >&2
   exit 1
 fi
 

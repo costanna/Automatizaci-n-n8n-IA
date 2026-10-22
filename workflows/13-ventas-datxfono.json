@@ -201,7 +201,8 @@
         "httpMethod": "POST",
         "path": "datxfono",
         "responseMode": "onReceived",
-        "options": {}
+        "options": {},
+        "authentication": "headerAuth"
       },
       "id": "b1000010-0000-4000-8000-000000000010",
       "name": "Importar a mano",
@@ -212,7 +213,13 @@
         480
       ],
       "webhookId": "b1000011-0000-4000-8000-000000000011",
-      "notes": "Permite lanzar la importacion a mano (por ejemplo, despues de volcar el CSV)."
+      "notes": "Permite lanzar la importacion a mano (por ejemplo, despues de volcar el CSV).",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "HhbFRoXvOHGcQ16w",
+          "name": "Webhooks - Tienda"
+        }
+      }
     }
   ],
   "connections": {

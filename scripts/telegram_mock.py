@@ -10,8 +10,10 @@ Implementa lo que necesita el bot (flujo `14 · Asistente de Telegram`):
 
 Para usarlo:
     python scripts/telegram_mock.py --puerto 8081 \
-        --url http://localhost:5678/webhook/telegram \
-        --secreto paso-firme-token-bot-2026
+        --url http://localhost:5678/webhook/telegram
+
+  El secreto (la cabecera que comprueba n8n) se lee de TELEGRAM_SECRET_TOKEN, en el entorno o
+  en el `.env`; tambien se puede pasar con --secreto.
 
 Endpoints:
 * `POST /_inyectar`  {"chat_id":"111111","text":"¿cuánto me falta?","first_name":"Ana"}
@@ -33,6 +35,21 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 ESTADO = {"enviados": [], "url": None, "secreto": None}
 CANDADO = threading.Lock()
+
+
+def _secreto_del_env() -> str | None:
+    """TELEGRAM_SECRET_TOKEN del entorno o, si no, del .env del proyecto."""
+    import os
+    from pathlib import Path
+
+    if os.getenv("TELEGRAM_SECRET_TOKEN"):
+        return os.getenv("TELEGRAM_SECRET_TOKEN")
+    env = Path(__file__).resolve().parent.parent / ".env"
+    if env.exists():
+        for linea in env.read_text(encoding="utf-8").splitlines():
+            if linea.startswith("TELEGRAM_SECRET_TOKEN="):
+                return linea.split("=", 1)[1].strip()
+    return None
 
 
 class Manejador(BaseHTTPRequestHandler):
@@ -153,8 +170,8 @@ def main() -> int:
     ap.add_argument("--puerto", type=int, default=8081)
     ap.add_argument("--url", default="http://localhost:5678/webhook/telegram",
                     help="donde recibe n8n los updates de Telegram")
-    ap.add_argument("--secreto", default="paso-firme-token-bot-2026",
-                    help="valor de la cabecera X-Telegram-Bot-Api-Secret-Token")
+    ap.add_argument("--secreto", default=_secreto_del_env(),
+                    help="valor de la cabecera X-Telegram-Bot-Api-Secret-Token (por defecto, el del .env)")
     args = ap.parse_args()
 
     ESTADO["url"] = args.url

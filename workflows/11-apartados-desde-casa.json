@@ -6,7 +6,8 @@
         "httpMethod": "POST",
         "path": "confirmar-solicitud",
         "responseMode": "responseNode",
-        "options": {}
+        "options": {},
+        "authentication": "headerAuth"
       },
       "id": "a1000002-0000-4000-8000-000000000002",
       "name": "Confirmar solicitud",
@@ -16,7 +17,13 @@
         -700,
         480
       ],
-      "notes": "La tienda confirma la solicitud cuando llega el abono inicial."
+      "notes": "La tienda confirma la solicitud cuando llega el abono inicial.",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "HhbFRoXvOHGcQ16w",
+          "name": "Webhooks - Tienda"
+        }
+      }
     },
     {
       "parameters": {
@@ -157,7 +164,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Crea la solicitud de apartado: el cliente ha pedido apartar unos zapatos desde\n// casa, pero todavia no ha pagado el abono inicial.\n//\n// La solicitud se guarda en los datos estaticos del flujo (la memoria de n8n entre\n// ejecuciones) con un codigo para que la tienda pueda confirmarla.\nconst entrada = $input.first().json ?? {};\nconst datos = entrada.datos ?? entrada;\n\nconst euros = (n) => Number(n ?? 0).toFixed(2).replace('.', ',') + ' EUR';\nconst precio = Number(String(datos.precio ?? '').replace(',', '.'));\nconst digitos = (s) => String(s ?? '').replace(/[^0-9]/g, '');\n\nconst staticData = $getWorkflowStaticData('global');\nstaticData.solicitudes = staticData.solicitudes ?? {};\nstaticData.contador = (staticData.contador ?? 0) + 1;\n\nconst codigo = 'SOL-' + String(staticData.contador).padStart(4, '0');\nconst solicitud = {\n  codigo,\n  cliente: String(datos.cliente ?? '').trim(),\n  telefono: digitos(datos.telefono),\n  email: String(datos.email ?? '').trim(),\n  producto: String(datos.producto ?? '').trim(),\n  talla: String(datos.talla ?? '').trim(),\n  precio: Number.isFinite(precio) ? precio : 0,\n  forma_pago: String(datos.forma_pago ?? 'bizum').trim().toLowerCase(),\n  fecha: new Intl.DateTimeFormat('en-CA', {\n    timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',\n  }).format(new Date()),\n  estado: 'pendiente',\n};\n\nstaticData.solicitudes[codigo] = solicitud;\n\nconst cuerpo = [\n  'Un cliente quiere apartar unos zapatos desde casa:',\n  '',\n  'Codigo de la solicitud: ' + codigo,\n  'Cliente: ' + (solicitud.cliente || '(sin nombre)'),\n  'Telefono: ' + (solicitud.telefono || '(sin telefono)'),\n  'Correo: ' + (solicitud.email || '(sin correo)'),\n  'Producto: ' + solicitud.producto + (solicitud.talla ? ' · talla ' + solicitud.talla : ''),\n  'Precio: ' + euros(solicitud.precio),\n  'Paga con: ' + solicitud.forma_pago,\n  '',\n  'Cuando llegue el abono inicial, confirma la solicitud con:',\n  'POST /webhook/confirmar-solicitud  { \"codigo\": \"' + codigo + '\", \"importe\": 10 }',\n  '',\n  'El apartado NO se ha creado todavia: solo es una solicitud.',\n].join('\\n');\n\nreturn [{\n  json: {\n    ...entrada,\n    solicitud,\n    codigo,\n    cuerpo,\n  },\n}];"
+        "jsCode": "// Crea la solicitud de apartado: el cliente ha pedido apartar unos zapatos desde\n// casa, pero todavia no ha pagado el abono inicial.\n//\n// La solicitud se guarda en los datos estaticos del flujo (la memoria de n8n entre\n// ejecuciones) con un codigo para que la tienda pueda confirmarla.\nconst entrada = $input.first().json ?? {};\nconst datos = entrada.datos ?? entrada;\n\nconst euros = (n) => Number(n ?? 0).toFixed(2).replace('.', ',') + ' EUR';\nconst precio = Number(String(datos.precio ?? '').replace(',', '.'));\nconst digitos = (s) => String(s ?? '').replace(/[^0-9]/g, '');\n\nconst staticData = $getWorkflowStaticData('global');\nstaticData.solicitudes = staticData.solicitudes ?? {};\nstaticData.contador = (staticData.contador ?? 0) + 1;\n\nconst codigo = 'SOL-' + String(staticData.contador).padStart(4, '0');\nconst solicitud = {\n  codigo,\n  cliente: String(datos.cliente ?? '').trim(),\n  telefono: digitos(datos.telefono),\n  email: String(datos.email ?? '').trim(),\n  producto: String(datos.producto ?? '').trim(),\n  talla: String(datos.talla ?? '').trim(),\n  precio: Number.isFinite(precio) ? precio : 0,\n  forma_pago: String(datos.forma_pago ?? 'bizum').trim().toLowerCase(),\n  fecha: new Intl.DateTimeFormat('en-CA', {\n    timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit',\n  }).format(new Date()),\n  estado: 'pendiente',\n};\n\nstaticData.solicitudes[codigo] = solicitud;\n\nconst cuerpo = [\n  'Un cliente quiere apartar unos zapatos desde casa:',\n  '',\n  'Codigo de la solicitud: ' + codigo,\n  'Cliente: ' + (solicitud.cliente || '(sin nombre)'),\n  'Telefono: ' + (solicitud.telefono || '(sin telefono)'),\n  'Correo: ' + (solicitud.email || '(sin correo)'),\n  'Producto: ' + solicitud.producto + (solicitud.talla ? ' · talla ' + solicitud.talla : ''),\n  'Precio: ' + euros(solicitud.precio),\n  'Paga con: ' + solicitud.forma_pago,\n  '',\n  'Cuando llegue el abono inicial, confirma la solicitud con:',\n  'POST /webhook/confirmar-solicitud  { \"codigo\": \"' + codigo + '\", \"importe\": 10 }',\n  '(con la cabecera X-Webhook-Token: el WEBHOOK_TOKEN de la tienda)',\n  '',\n  'El apartado NO se ha creado todavia: solo es una solicitud.',\n].join('\\n');\n\nreturn [{\n  json: {\n    ...entrada,\n    solicitud,\n    codigo,\n    cuerpo,\n  },\n}];"
       },
       "id": "a100000b-0000-4000-8000-00000000000b",
       "name": "Preparar la solicitud",

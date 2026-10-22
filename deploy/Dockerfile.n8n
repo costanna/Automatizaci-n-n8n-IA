@@ -26,6 +26,8 @@ ENV TZ=Europe/Madrid
 ENV N8N_DIAGNOSTICS_ENABLED=false
 # n8n 2.x solo deja leer ficheros de estas carpetas: sin esto, los flujos no pueden abrir /datos.
 ENV N8N_RESTRICT_FILE_ACCESS_TO=/datos;/home/node/.n8n-files
+# El despachador compara el hash SHA-256 del token del webhook: hace falta crypto en los nodos Code.
+ENV NODE_FUNCTION_ALLOW_BUILTIN=crypto
 
 EXPOSE 10000
 
