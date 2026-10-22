@@ -90,7 +90,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Resumen de la demo: que se ha creado y como queda la tienda.\nconst creados = $('Crear apartado de demo').all().map((i) => i.json).filter((a) => a && a.id !== undefined);\nconst resumen = $input.first().json ?? {};\n// 'tienda' quiere decir 'la direccion de la tienda', que resuelve el\n// subflujo de notificacion con el fichero de configuracion.\nconst emailTienda = 'tienda';\nconst escapar = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nconst cuerpo = [\n  'Datos de demo creados en la tienda:',\n  '',\n].concat(creados.map((c) => '  - #' + c.id + ' ' + c.cliente + ' | ' + c.producto + ' | pendiente ' + Number(c.pendiente).toFixed(2) + ' EUR | limite ' + c.fecha_limite)).concat([\n  '',\n  'Estado de la tienda: ' + (resumen.activo ?? 0) + ' activos, ' + (resumen.liquidado ?? 0) + ' liquidados, ' + (resumen.vencido ?? 0) + ' vencidos.',\n]).join('\\n');\n\nreturn [{\n  json: {\n    canal: 'email',\n    email: emailTienda,\n    asunto: 'Datos de demo creados',\n    cuerpo,\n    cuerpo_html: '<p>' + escapar(cuerpo).replace(/\\n/g, '<br>') + '</p>',\n    creados: creados.length,\n  },\n}];\n"
+        "jsCode": "// Resumen de la demo: que se ha creado y como queda la tienda.\n// La API da las fechas como AAAA-MM-DD; en los mensajes van como dia/mes/año.\nconst fechaES = (f) => {\n  const t = String(f ?? '').split('-');\n  return t.length === 3 ? t[2].slice(0, 2) + '/' + t[1] + '/' + t[0] : String(f ?? '');\n};\nconst creados = $('Crear apartado de demo').all().map((i) => i.json).filter((a) => a && a.id !== undefined);\nconst resumen = $input.first().json ?? {};\n// 'tienda' quiere decir 'la direccion de la tienda', que resuelve el\n// subflujo de notificacion con el fichero de configuracion.\nconst emailTienda = 'tienda';\nconst escapar = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nconst cuerpo = [\n  'Datos de demo creados en la tienda:',\n  '',\n].concat(creados.map((c) => '  - #' + c.id + ' ' + c.cliente + ' | ' + c.producto + ' | pendiente ' + Number(c.pendiente).toFixed(2) + ' EUR | limite ' + fechaES(c.fecha_limite))).concat([\n  '',\n  'Estado de la tienda: ' + (resumen.activo ?? 0) + ' activos, ' + (resumen.liquidado ?? 0) + ' liquidados, ' + (resumen.vencido ?? 0) + ' vencidos.',\n]).join('\\n');\n\nreturn [{\n  json: {\n    canal: 'email',\n    email: emailTienda,\n    asunto: 'Datos de demo creados',\n    cuerpo,\n    cuerpo_html: '<p>' + escapar(cuerpo).replace(/\\n/g, '<br>') + '</p>',\n    creados: creados.length,\n  },\n}];\n"
       },
       "id": "75595a56-8dae-479e-91c8-9aab462f3b53",
       "name": "Preparar resumen",
@@ -206,7 +206,8 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "errorWorkflow": "PWE9gL9wPSBm6ZHV"
   },
   "pinData": {},
   "active": false

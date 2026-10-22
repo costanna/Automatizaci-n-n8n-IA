@@ -33,6 +33,16 @@ Render emite el certificado TLS automáticamente: la URL del servicio ya es
 5. La app de la tienda también tiene que llegar a n8n: en el `.env` de la tienda,
    `N8N_WEBHOOK_URL=https://paso-firme-n8n.onrender.com/webhook/tienda?token=<token>`.
 
+### La configuración y los CSV van dentro de la imagen
+
+En local, `data/` se monta en `/datos`. En la nube no hay montaje: `deploy/Dockerfile.n8n` copia en
+`/datos` lo que leen los flujos (`config.csv`, `datxfono.csv` y los dos CSV del Excel) y pone
+`N8N_RESTRICT_FILE_ACCESS_TO=/datos;/home/node/.n8n-files`, sin el cual n8n 2.x no deja abrirlos.
+El `.dockerignore` deja fuera el resto de `data/` (los correos enviados y los avisos del banco).
+
+- **Cambiar la configuración en la nube** (el umbral, los correos…) es un commit y un nuevo
+  despliegue (`autoDeploy` está apagado): la imagen lleva el `config.csv` del repositorio.
+
 ### Los tres pasos que se olvidan
 
 1. **Las credenciales.** Los flujos no llevan las claves dentro (a propósito), así que la

@@ -44,9 +44,13 @@ Ninguna: el flujo consulta la API.
 
 ## Reglas
 
-- R-A6: **cada cliente recibe cada aviso una sola vez**. Se controla con un marcador en el
-  histórico (`Google Sheets` / `Data Table`): si ya se avisó de ese `apartado_id` para esos
-  días, no se vuelve a avisar.
+- R-A6: **cada cliente recibe cada aviso una sola vez**. Se controla con la clave
+  `apartado_id:días` en los datos estáticos del flujo (`$getWorkflowStaticData`): si ya se
+  avisó de ese apartado para esos días, no se vuelve a avisar. n8n solo guarda esos datos en
+  las ejecuciones de producción, no en las manuales.
+- El modelo redacta cada recordatorio por separado y *Comprobar las cifras* revisa **cada uno**
+  (modo *Run Once for Each Item*). El nodo del modelo solo devuelve su texto: el correo, el
+  asunto y las cifras se recuperan del recordatorio preparado con el mismo índice.
 - R-A1: el importe del vale y el pendiente son los de la API.
 - La app **no** vence los apartados sola: lo hace este flujo.
 
@@ -70,4 +74,7 @@ Ninguna: el flujo consulta la API.
 
 ## Datos de prueba
 
-`tests/flujo-06/entradas.json` — apartados que vencen en 7 días, en 1 día y fuera de plazo.
+`tests/flujo-06/entradas.json` — apartados que vencen en 7 días, en 1 día, dentro de 30 días y
+fuera de plazo. Se prueba con `python scripts/probar_flujos.py --flujo 6`, que crea esos
+apartados y lanza el flujo como el botón *Execute workflow* (hace falta `N8N_EMAIL` y
+`N8N_PASSWORD`). "Una sola vez" se comprueba en producción (ver el JSON de la prueba).

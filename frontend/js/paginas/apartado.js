@@ -2,7 +2,7 @@
 
 import { api } from "../api.js";
 import { avisoDeLaDireccion, mostrarAviso, montarLayout } from "../layout.js";
-import { FORMAS_PAGO, diasHasta, esc, euros, etiquetaEstado, icono, opcionesFormaPago, plazo } from "../ui.js";
+import { FORMAS_PAGO, diasHasta, esc, euros, etiquetaEstado, fecha, icono, opcionesFormaPago, plazo } from "../ui.js";
 
 const principal = montarLayout("apartados");
 const id = location.pathname.split("/").pop();
@@ -52,7 +52,7 @@ async function pintar() {
           </div>
           <div>
             <div class="progress" role="progressbar" aria-valuenow="${porcentaje}" aria-valuemin="0" aria-valuemax="100" aria-label="Pagado"><span style="width: ${porcentaje}%"></span></div>
-            <p class="muted" style="margin:6px 0 0">${porcentaje}% pagado · Apartado el ${esc(a.fecha)} · Fecha límite ${esc(a.fecha_limite)} ${plazo(a)}</p>
+            <p class="muted" style="margin:6px 0 0">${porcentaje}% pagado · Apartado el ${fecha(a.fecha)} · Fecha límite ${fecha(a.fecha_limite)} ${plazo(a)}</p>
           </div>
           ${a.vale ? `<div class="alert alert-ok" style="margin:0">${icono("vale")} <span>Vale de compra <strong>${esc(a.vale.codigo)}</strong> por ${euros(a.vale.importe)}${a.vale.usado ? " (usado)" : ""}</span></div>` : ""}
         </section>
@@ -61,7 +61,7 @@ async function pintar() {
           <div class="table-wrap">
             <table>
               <thead><tr><th>Fecha</th><th>Forma de pago</th><th class="num">Importe</th></tr></thead>
-              <tbody>${abonos.map((b) => `<tr><td>${esc(b.fecha)}</td><td>${esc(capitalizar(b.forma_pago))}</td><td class="num">${euros(b.importe)}</td></tr>`).join("")}</tbody>
+              <tbody>${abonos.map((b) => `<tr><td>${fecha(b.fecha)}</td><td>${esc(capitalizar(b.forma_pago))}</td><td class="num">${euros(b.importe)}</td></tr>`).join("")}</tbody>
             </table>
           </div>
         </section>

@@ -21,7 +21,7 @@
   "resultado_esperado": {
     "email_enviado_a": "carmen@example.com",
     "asunto": "Tu apartado · Paso Firme",
-    "debe_contener": ["Botín piel marrón", "89,90 EUR", "10,00 EUR", "79,90 EUR", "2027-01-18"]
+    "debe_contener": ["Botín piel marrón", "89,90 EUR", "10,00 EUR", "79,90 EUR", "18/01/2027"]
   },
   "caso_sin_correo": {
     "entrada": {

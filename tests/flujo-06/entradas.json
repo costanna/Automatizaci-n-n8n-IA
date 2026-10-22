@@ -1,0 +1,35 @@
+{
+  "flujo": "06 · Recordatorios y vencimientos",
+  "disparador": "Schedule Trigger (08:30, Europe/Madrid)",
+  "prueba": "python scripts/probar_flujos.py --flujo 6 (con N8N_EMAIL y N8N_PASSWORD)",
+  "entrada": {
+    "hoy": "2026-10-22",
+    "nota": "El plazo son 90 dias desde la fecha del apartado: la fecha decide cuantos dias faltan",
+    "apartados_activos": [
+      { "cliente": "Cliente Plazo Siete", "email": "prueba.plazo.siete@example.com", "fecha": "2026-07-31", "fecha_limite": "2026-10-29", "precio": 60.0, "abonado": 10.0, "pendiente": 50.0 },
+      { "cliente": "Cliente Plazo Uno", "email": "prueba.plazo.uno@example.com", "fecha": "2026-07-25", "fecha_limite": "2026-10-23", "precio": 60.0, "abonado": 10.0, "pendiente": 50.0 },
+      { "cliente": "Cliente Plazo Lejos", "email": "prueba.plazo.lejos@example.com", "fecha": "2026-08-23", "fecha_limite": "2026-11-21", "precio": 60.0, "abonado": 10.0, "pendiente": 50.0 },
+      { "cliente": "Cliente Plazo Vencido", "email": "prueba.plazo.vencido@example.com", "fecha": "2026-07-19", "fecha_limite": "2026-10-17", "precio": 60.0, "abonado": 10.0, "pendiente": 50.0 }
+    ]
+  },
+  "resultado_esperado": {
+    "recordatorios": [
+      { "para": "prueba.plazo.siete@example.com", "asunto": "Tu apartado vence dentro de 7 días", "debe_contener": ["50,00", "29/10/2026"] },
+      { "para": "prueba.plazo.uno@example.com", "asunto": "Tu apartado vence mañana", "debe_contener": ["50,00", "23/10/2026"] }
+    ],
+    "sin_aviso": ["prueba.plazo.lejos@example.com"],
+    "vencimiento": {
+      "apartado": "Cliente Plazo Vencido",
+      "estado_despues": "vencido",
+      "vale": { "lo_genera": "la app (POST /api/apartados/{id}/vencer)", "importe": 10.0 },
+      "aviso_al_cliente": { "para": "prueba.plazo.vencido@example.com", "cuantos": 1, "debe_contener": ["VALE-", "10,00 EUR"] },
+      "aviso_a_la_tienda": { "debe_contener": ["#<id del apartado>", "vuelve"] }
+    },
+    "redaccion_con_ia": "El modelo cambia el tono; si el texto pierde alguna cifra, se manda el original"
+  },
+  "cada_aviso_una_sola_vez": {
+    "como_se_prueba": "En produccion: n8n no guarda los datos estaticos en las ejecuciones manuales",
+    "entrada": "La misma ejecucion programada dos dias seguidos sin cambios en los apartados",
+    "resultado_esperado": "El segundo dia no se repite ningun recordatorio (claves 'id:7' e 'id:1' en los datos estaticos)"
+  }
+}

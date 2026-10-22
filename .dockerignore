@@ -4,4 +4,10 @@
 **/.pytest_cache
 *.db
 backend/tests
-data
+# De data/ solo entra lo que leen los flujos (la imagen de n8n de la nube lo copia en /datos):
+# la configuracion y los CSV de ejemplo. Los correos enviados y los avisos del banco, no.
+data/*
+!data/config.csv
+!data/datxfono.csv
+!data/excel_actual_apartados.csv
+!data/excel_actual_ventas.csv

@@ -91,7 +91,8 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "errorWorkflow": "PWE9gL9wPSBm6ZHV"
   },
   "pinData": {},
   "active": false

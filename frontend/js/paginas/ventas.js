@@ -2,7 +2,7 @@
 
 import { api } from "../api.js";
 import { avisoDeLaDireccion, mostrarAviso, montarLayout } from "../layout.js";
-import { FORMAS_PAGO, esc, euros, icono, opcionesFormaPago, paginacion } from "../ui.js";
+import { FORMAS_PAGO, esc, euros, fecha, icono, opcionesFormaPago, paginacion } from "../ui.js";
 
 const principal = montarLayout("ventas");
 const POR_PAGINA = 25;
@@ -31,7 +31,7 @@ async function pintar() {
         <div class="table-wrap">
           <table>
             <thead><tr><th>Fecha</th><th>Concepto</th><th>Forma de pago</th><th class="num">Importe</th></tr></thead>
-            <tbody>${items.map((v) => `<tr><td>${esc(v.fecha)}</td><td>${esc(v.concepto)}</td><td>${esc(capitalizar(v.forma_pago))}</td><td class="num">${euros(v.importe)}</td></tr>`).join("")}</tbody>
+            <tbody>${items.map((v) => `<tr><td>${fecha(v.fecha)}</td><td>${esc(v.concepto)}</td><td>${esc(capitalizar(v.forma_pago))}</td><td class="num">${euros(v.importe)}</td></tr>`).join("")}</tbody>
           </table>
           ${items.length ? "" : '<div class="empty">Todavía no hay ventas. Registra la primera con el formulario de arriba.</div>'}
         </div>

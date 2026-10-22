@@ -63,14 +63,16 @@ Un mensaje de Telegram:
 - **Al modelo solo se le manda lo justo**: la pregunta del cliente y sus propios apartados. Ni
   datos de otros clientes, ni claves, ni el resto de la tienda (ver
   [`docs/rgpd.md`](../docs/rgpd.md)).
-- El periodo de las cifras de la tienda se deduce de la pregunta ("esta semana" → semana).
+- El periodo de las cifras de la tienda se deduce de la pregunta, con la fecha de Madrid:
+  "hoy" → hoy; "esta semana" → los últimos 7 días; "este mes" (o sin periodo) → del día 1 a
+  hoy; "el mes pasado" o "el mes anterior" → el mes natural anterior.
 
 ## Casos de error
 
 | Caso | Comportamiento |
 |---|---|
 | El chat no está apuntado | Se pide el teléfono; al enviarlo, se apunta y se responde |
-| El teléfono no está en la app | Se responde que no hay ningún apartado con ese teléfono |
+| El teléfono no está en la app | Se responde que no hay ningún apartado con ese teléfono y se ofrece pasar por la tienda. Siempre con la respuesta del flujo: sin cifras que comprobar, el modelo no redacta |
 | El modelo no está disponible | Se usa la respuesta calculada por el flujo (el nodo del agente está en *On Error → Continue*) |
 | El modelo cambia una cifra | El nodo *Comprobar las cifras* lo detecta y usa la respuesta original |
 | `TELEGRAM_ADMIN_ID` no está configurado | Nadie es la tienda: todas las preguntas se tratan como de cliente |
@@ -85,22 +87,18 @@ Un mensaje de Telegram:
 
 ## Datos de prueba
 
+Los casos y el resultado esperado están en `tests/flujo-14/entradas.json`. Se prueban con el
+mock de Telegram, que manda los mensajes al webhook `/webhook/telegram` con la cabecera
+`X-Telegram-Bot-Api-Secret-Token`, igual que Telegram:
+
 ```bash
-# cliente sin apuntar
-curl -X POST http://localhost:5678/webhook/asistente \
-  -H "Content-Type: application/json" \
-  -d '{"message":{"chat":{"id":"111111"},"from":{"first_name":"Ana"},"text":"¿cuánto me falta?"}}'
-
-# cliente con el teléfono (se apunta)
-curl -X POST http://localhost:5678/webhook/asistente \
-  -H "Content-Type: application/json" \
-  -d '{"message":{"chat":{"id":"111111"},"from":{"first_name":"Ana"},"text":"600 000 001"}}'
-
-# la tienda
-curl -X POST http://localhost:5678/webhook/asistente \
-  -H "Content-Type: application/json" \
-  -d '{"message":{"chat":{"id":"999999"},"from":{"first_name":"Marisa"},"text":"¿cuánto se recaudó esta semana?"}}'
+python scripts/telegram_mock.py --puerto 8081 \
+    --url http://localhost:5678/webhook/telegram --secreto <TELEGRAM_SECRET_TOKEN>
+python scripts/probar_flujos.py --flujo 14
 ```
+
+> Si se escribe a mano al mock desde Git Bash con `curl`, los acentos y la `¿` no llegan en
+> UTF-8 y el mock recibe un mensaje vacío: es mejor usar `probar_flujos.py`.
 
 ## Credenciales
 
