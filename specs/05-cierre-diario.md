@@ -40,6 +40,10 @@ Ninguna: el flujo pregunta a la API por las ventas y los abonos del día.
 
 ## Reglas
 
+- **Un cierre con ceros no se manda nunca por un error.** Las peticiones a la API llevan
+  *neverError*: si alguna devuelve un error, *Calcular el cierre* para el flujo y el Error Workflow
+  avisa a la tienda. (Antes, las ventas se pedian sin fechas, la API respondia 422 y el cierre
+  salia con 0 ventas sin que nadie se enterara.)
 - "Ventas del día" = ventas directas **+** abonos cobrados ese día (los abonos iniciales también
   cuentan: nacen como abono dentro de un apartado creado ese día).
 - Los importes del resumen son los de la API; el flujo solo **suma**.
@@ -62,4 +66,6 @@ Ninguna: el flujo pregunta a la API por las ventas y los abonos del día.
 
 ## Datos de prueba
 
-`tests/flujo-05/entradas.json` — día con movimientos y día vacío.
+`tests/flujo-05/entradas.json` — día con movimientos, día vacío y la API caída. Se prueba con
+`python scripts/probar_flujos.py --flujo 5`, que registra una venta en efectivo, otra por Bizum y
+un abono con tarjeta, lanza el cierre y compara cada línea con la API.
