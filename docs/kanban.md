@@ -11,10 +11,11 @@ comprobación. Las historias que llevan etiqueta de nivel **solo** se hacen si s
 
 | Por hacer | En curso | En revisión | Hecho |
 |---|---|---|---|
-| | HU-05 · Avisos de errores 🟢 | | HU-01 · Confirmación al apartar 🟢 |
-| | HU-16 · Funcionar siempre 🔴 | | HU-02 · Recibo de cada abono 🟢 |
+| | HU-16 · Funcionar siempre 🔴 | | HU-01 · Confirmación al apartar 🟢 |
+| | | | HU-02 · Recibo de cada abono 🟢 |
 | | | | HU-03 · Abonos por Bizum o transferencia 🟢 |
 | | | | HU-04 · Cierre de caja automático 🟢 |
+| | | | HU-05 · Avisos de errores 🟢 |
 | | | | HU-06 · Recordatorios de vencimiento 🟡 |
 | | | | HU-07 · Apartados vencidos con su vale 🟡 |
 | | | | HU-08 · Informe mensual 🟡 |
@@ -81,12 +82,12 @@ comprobación. Las historias que llevan etiqueta de nivel **solo** se hacen si s
 > Como **Marisa**, quiero que me avisen si una automatización falla, para no descubrir semanas
 > después que algo dejó de funcionar.
 
-- [ ] Cualquier flujo que falle envía un aviso con el nombre del flujo, el paso y el error.
-  *(Pendiente: ningún flujo tiene asignado `08 · Avisos de error` como Error Workflow.)*
+- [x] Cualquier flujo que falle envía un aviso con el nombre del flujo, el paso y el error.
+  (Todos los flujos tienen `08 · Avisos de error` como *Error Workflow*.)
 - [x] El aviso no incluye contraseñas ni claves.
 
 **Flujo:** `08 · Avisos de error` · **Spec:** `specs/08-error-workflow.md`
-**Prueba:** flujo de prueba que falla a propósito (`docs/como-importar-flujos.md`)
+**Prueba:** `scripts/probar_flujos.py --flujo 8` (para la tienda y comprueba que llega el aviso)
 
 ### HU-06 · Recordatorios de vencimiento 🟡
 
